@@ -491,7 +491,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             if(sizes.length === 0) {
                 formattedData.push({
                     sku: art.sku, nama: art.name, kategori: art.category_id, warna: art.color, 
-                    status: art.status_tipe, adsGlobal: art.ads_global, isAktif: art.is_aktif ? "Aktif" : "Non-Aktif", 
+                    status: "Real Stock", adsGlobal: art.ads, isAktif: art.status ? "Aktif" : "Non-Aktif", 
                     isPriority: art.is_priority, timestamp: new Date(art.updated_at).toLocaleString('id-ID'),
                     size: "-", qty: 0, tren: "-"
                 });
@@ -499,7 +499,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 sizes.forEach(sz => {
                   formattedData.push({
                     sku: art.sku, nama: art.name, kategori: art.category_id, warna: art.color, 
-                    status: art.status_tipe, adsGlobal: art.ads_global, isAktif: art.is_aktif ? "Aktif" : "Non-Aktif", 
+                    status: "Real Stock", adsGlobal: art.ads, isAktif: art.status ? "Aktif" : "Non-Aktif", 
                     isPriority: art.is_priority, timestamp: new Date(sz.updated_at || art.updated_at).toLocaleString('id-ID'),
                     size: sz.ukuran, qty: sz.qty, tren: sz.tren || "-"
                 });
@@ -518,11 +518,11 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
          // A. Upsert ke tabel 'articles'
           const { error: artErr } = await supabaseClient.from('articles').upsert({
             sku: sku,
-            name: isArtikelBaru ? nama : undefined, // disesuaikan ke kolom 'name'
-            category_id: kategori,                  // disesuaikan ke kolom 'category_id'
-            color: isArtikelBaru ? warna : undefined, // disesuaikan ke kolom 'color'
-            status_tipe: status,
-            ads_global: adsGlobal,
+            name: isArtikelBaru ? nama : undefined,
+            category_id: kategori,
+            color: isArtikelBaru ? warna : undefined,
+            status: true, // Karena tipenya boolean, kita set true (Aktif) untuk artikel baru
+            ads: adsGlobal, // Kita masukkan data ke kolom 'ads' asli bawaan Supabase Anda
             updated_at: new Date()
           }, { onConflict: 'sku' });
           
