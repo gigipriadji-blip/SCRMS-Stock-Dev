@@ -519,7 +519,7 @@
           const { error: artErr } = await supabase.from('articles').upsert({
             sku: sku,
             nama: isArtikelBaru ? nama : undefined, // hanya set nama jika artikel baru
-            kategori: finalKategori = kategori,
+            kategori: kategori,
             warna: isArtikelBaru ? warna : undefined,
             status_tipe: status,
             ads_global: adsGlobal,
