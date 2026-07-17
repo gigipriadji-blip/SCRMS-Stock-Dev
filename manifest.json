@@ -1,0 +1,21 @@
+{
+  "short_name": "SCRMS Stock",
+  "name": "SCRMS Stock Management",
+  "icons": [
+    {
+      "src": "./favicon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "./favicon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./vendor.html",
+  "background_color": "#212529",
+  "theme_color": "#212529",
+  "display": "standalone",
+  "orientation": "portrait"
+}

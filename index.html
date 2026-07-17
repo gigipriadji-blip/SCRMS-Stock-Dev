@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCRMS Stock</title>
+  <link rel="icon" type="image/png" href="./favicon.png">
+  
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    /* STYLES ASLI APLIKASI */
+    .nav-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; border-bottom: 2px solid #dee2e6; }
+    .nav-tabs .nav-link { white-space: nowrap; border: none; color: #6c757d; font-weight: 600; padding: 12px 20px; font-size: 1rem; }
+    .nav-tabs .nav-link.active { color: #000; border-bottom: 3px solid #000; background: none; }
+    .nav-tabs .nav-link:hover { color: #333; }
+    .article-card { background: #fff; border-radius: 12px; border: none; box-shadow: 0 3px 10px rgba(0,0,0,0.04); margin-bottom: 16px; padding: 16px; border-left: 5px solid transparent; }
+    .sku-text { font-size: 0.85rem; color: #8c8c8c; font-weight: 500; }
+    .article-title { font-size: 1.1rem; font-weight: 700; color: #2d3748; margin-bottom: 4px; }
+    .badge-fake { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+    .badge-real { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .size-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
+    .size-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 4px; text-align: center; cursor: pointer; transition: all 0.2s;}
+    .size-box:hover { background: #edf2f7; transform: scale(1.05); }
+    .size-name { font-size: 0.75rem; color: #718096; font-weight: bold; text-transform: uppercase; }
+    .size-qty { font-size: 0.95rem; font-weight: 700; color: #1a202c; }
+    .box-kurang { background-color: #fff5f5 !important; border-color: #feb2b2 !important; }
+    .box-kurang .size-qty { color: #e53e3e !important; }
+    .card-kurang { border-left-color: #e53e3e !important; }
+    .trend-up { color: #38a169; } .trend-down { color: #e53e3e; }
+    .sticky-tabs { position: sticky; top: 0; background-color: #f4f6f9; z-index: 1020; padding-top: 10px; }
+    .input-qty-baru { font-weight: 700; color: #0d6efd; background-color: #f8f9fa; font-size: 1.1rem; padding: 8px;}
+    .input-qty-baru:focus { background-color: #fff; box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25); }
+    .pc-card { border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 24px; background: #fff; border: 1px solid #e2e8f0; }
+    .table-master th { background-color: #f8f9fa; text-transform: uppercase; font-size: 0.85rem; color: #6c757d; }
+    .table-master td { padding: 12px 8px; font-size: 0.95rem; }
+    .row-hero-aman { border-left: 5px solid #198754 !important; }
+    .row-hero-kritis { border-left: 5px solid #dc3545 !important; background-color: #fff5f5; }
+    .kritis-text { color: #dc3545; font-weight: bold; }
+    .recap-card { border-radius: 12px; padding: 20px; color: #fff; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .bg-gradient-primary { background: linear-gradient(135deg, #0d6efd, #0a58ca); }
+    .bg-gradient-success { background: linear-gradient(135deg, #198754, #146c43); }
+    .bg-gradient-danger { background: linear-gradient(135deg, #dc3545, #b02a37); }
+    .update-box { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 4px 8px; font-size: 0.8rem; color: #495057; display: inline-block;}
+  </style>
+</head>
+<body class="bg-light">
+
+  <nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid px-4">
+      <span class="navbar-brand fw-bold fs-5"><i class="fa-solid fa-boxes-stacked me-2"></i> SCRMS Stock</span>
+      <button class="btn btn-outline-light" onclick="loadDashboardData()"><i class="fa-solid fa-sync"></i> Sync Data</button>
+    </div>
+  </nav>
+
+  <div class="container-fluid px-4 mt-4">
+    <div id="vendorWelcomeHeader" class="d-none mb-3 p-3 bg-light border-start border-primary border-4 rounded shadow-sm">
+      <div class="d-flex align-items-center">
+        <i class="fa-solid fa-handshake text-primary fa-2x me-3"></i>
+        <div>
+          <h6 class="mb-0 fw-bold text-muted">Selamat Datang di Portal Supply Chain</h6>
+          <h4 class="mb-0 fw-bold text-dark" id="txtNamaVendorWelcome">-</h4>
+        </div>
+      </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-4 pb-1 border-bottom border-2" id="mainTabs" role="tablist" style="font-size: 0.95rem;">
+      <li class="nav-item menu-internal"><button class="nav-link active" id="hero-tab" data-bs-toggle="tab" data-bs-target="#heroPage" type="button"><i class="fa-solid fa-triangle-exclamation text-danger me-2"></i>Hero Alert (Internal)</button></li>
+      <li class="nav-item menu-internal"><button class="nav-link" id="dash-tab" data-bs-toggle="tab" data-bs-target="#dashPage" type="button"><i class="fa-solid fa-mobile-screen me-2 text-primary"></i>Vendor Display</button></li>
+      <li class="nav-item menu-internal"><button class="nav-link" id="master-tab" data-bs-toggle="tab" data-bs-target="#masterPage" type="button"><i class="fa-solid fa-book-open me-2 text-success"></i>Master Katalog</button></li>
+      <li class="nav-item menu-internal"><button class="nav-link" id="manage-tab" data-bs-toggle="tab" data-bs-target="#managePage" type="button"><i class="fa-solid fa-sliders me-2 text-warning"></i>Manajemen Stok</button></li>
+      <li class="nav-item menu-internal"><button class="nav-link" id="vendor-manage-tab" data-bs-toggle="tab" data-bs-target="#vendorManagePage" type="button"><i class="fa-solid fa-users me-2 text-secondary"></i>Manajemen Vendor</button></li>
+      <li class="nav-item menu-internal"><button class="nav-link" id="vendor-monitor-tab" data-bs-toggle="tab" data-bs-target="#vendorMonitorPage" type="button"><i class="fa-solid fa-chalkboard-user me-2 text-info"></i>Monitor Vendor</button></li>
+    </ul>
+
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="heroPage">
+        <div class="pc-card mb-4 border-top border-danger border-5">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+              <h4 class="mb-1 fw-bold text-dark"><i class="fa-solid fa-fire text-danger me-2"></i>Monitoring Artikel Hero</h4>
+              <span class="text-muted small">Target dihitung dari total stok artikel (akumulasi semua size).</span>
+            </div>
+            <div class="text-end">
+              <div class="mb-2">
+                <button class="btn btn-sm btn-success fw-bold me-1 shadow-sm" onclick="exportHeroToExcel()"><i class="fa-solid fa-file-excel me-1"></i>Excel</button>
+                <button class="btn btn-sm btn-danger fw-bold shadow-sm" onclick="exportHeroToPDF()"><i class="fa-solid fa-file-pdf me-1"></i>PDF</button>
+              </div>
+              <span class="badge bg-light text-dark border px-3 py-2 fs-6">Target Ketahanan Aman: <strong class="text-danger" id="displayBufferHero">- Hari</strong></span>
+            </div>
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-4"><div class="recap-card bg-gradient-primary"><div class="d-flex justify-content-between align-items-center"><div><h6 class="mb-1 text-white-50 text-uppercase fw-bold">Total Hero</h6><h2 class="mb-0 fw-bold" id="heroCountTotal">0</h2></div><i class="fa-solid fa-crown fa-3x opacity-50"></i></div></div></div>
+            <div class="col-md-4"><div class="recap-card bg-gradient-danger"><div class="d-flex justify-content-between align-items-center"><div><h6 class="mb-1 text-white-50 text-uppercase fw-bold">Status Kritis</h6><h2 class="mb-0 fw-bold" id="heroCountKritis">0</h2></div><i class="fa-solid fa-triangle-exclamation fa-3x opacity-50"></i></div></div></div>
+            <div class="col-md-4"><div class="recap-card bg-gradient-success"><div class="d-flex justify-content-between align-items-center"><div><h6 class="mb-1 text-white-50 text-uppercase fw-bold">Status Aman</h6><h2 class="mb-0 fw-bold" id="heroCountAman">0</h2></div><i class="fa-solid fa-check-circle fa-3x opacity-50"></i></div></div></div>
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-8">
+              <div class="input-group input-group-lg">
+                <span class="input-group-text bg-light border-end-0" style="border-color: #dee2e6;"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                <input type="text" id="searchHero" class="form-control border-start-0 border-end-0" placeholder="Cari nama artikel hero..." onkeyup="filterHeroAlert()">
+                <button class="btn bg-light border border-start-0 text-muted" type="button" id="btnClearSearchHero" onclick="clearSearchHero()" style="display: none; border-color: #dee2e6; z-index: 4;"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <select id="filterKategoriHero" class="form-select form-select-lg" onchange="renderHeroAlert()">
+                <option value="">-- Semua Kategori Hero --</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table align-middle table-hover table-master border">
+              <thead>
+                <tr><th>Artikel & SKU</th><th>Warna</th><th class="text-center">Total Stok</th><th>ADS Global & Selisih</th><th class="text-center">Ketahanan</th><th class="text-center">Status</th><th class="text-center">Update Terakhir</th></tr>
+              </thead>
+              <tbody id="heroAlertBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="dashPage">
+        <div class="card p-3 mb-3 bg-white border-0 shadow-sm" style="border-radius:12px;">
+          <div class="row align-items-center g-2">
+            <div class="col-12 col-md-4"></div>
+            <div class="col-12 col-md-8">
+              <div class="input-group mb-2">
+                <span class="input-group-text bg-white border-end-0" style="border-color: #dee2e6;"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                <input type="text" id="searchArt" class="form-control border-start-0 border-end-0 ps-0" placeholder="Cari SKU atau nama artikel aktif..." onkeyup="filterDisplay()">
+                <button class="btn bg-white border border-start-0 text-muted" type="button" id="btnClearSearchArt" onclick="clearSearchArt()" style="display: none; border-color: #dee2e6; z-index: 4;"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+              <div class="d-flex flex-wrap justify-content-between align-items-center mt-2 gap-2">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                  <div class="form-check form-switch pt-1">
+                    <input class="form-check-input" type="checkbox" id="filterPrioOnly" onchange="filterDisplay()" style="transform: scale(1.2); margin-top: 0.2rem;">
+                    <label class="form-check-label fw-bold ms-2 text-dark" for="filterPrioOnly"><i class="fa-solid fa-star text-warning me-1"></i>Hanya Prioritas</label>
+                  </div>
+                  <select id="filterTipeStok" class="form-select form-select-sm fw-bold border-secondary w-auto" onchange="filterDisplay()">
+                    <option value="Semua">Semua Tipe Stok</option>
+                    <option value="Real Stock">Real Stock</option>
+                    <option value="Fake Stock">Fake Stock</option>
+                  </select>
+                </div>
+                <button class="btn btn-sm btn-success fw-bold shadow-sm" onclick="exportVendorToExcel()"><i class="fa-solid fa-file-excel me-1"></i>Download Excel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sticky-tabs">
+          <ul class="nav nav-tabs mb-3 border-0" id="categoryTabs" role="tablist" style="font-size: 0.9rem;"></ul>
+        </div>
+        <div id="articlesContainer"></div>
+      </div>
+
+      <div class="tab-pane fade" id="masterPage">
+        <div class="pc-card mb-4 p-4 bg-white border-0 shadow-sm" style="border-radius:12px;">
+          <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+            <div>
+              <h5 class="mb-1 fw-bold text-dark"><i class="fa-solid fa-list-check me-2 text-primary"></i>Katalog Master Artikel</h5>
+              <span class="text-muted small">Total stok gabungan dan rincian ukuran dari seluruh artikel aktif.</span>
+            </div>
+            <button class="btn btn-sm btn-success fw-bold shadow-sm px-3" onclick="exportMasterToExcel()"><i class="fa-solid fa-file-excel me-1"></i>Backup Excel</button>
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-12 col-md-4">
+              <div class="p-3 bg-primary bg-opacity-10 border border-primary border-opacity-25 rounded-3 d-flex align-items-center h-100">
+                <div class="fs-1 text-primary me-3 ms-2"><i class="fa-solid fa-box-open"></i></div>
+                <div><div class="small text-muted fw-bold">TOTAL ARTIKEL (SKU)</div><div class="fs-4 fw-bold text-dark" id="recapTotalArtikel">0</div></div>
+              </div>
+            </div>
+            <div class="col-12 col-md-4">
+              <div class="p-3 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 d-flex align-items-center h-100">
+                <div class="fs-1 text-success me-3 ms-2"><i class="fa-solid fa-shirt"></i></div>
+                <div><div class="small text-muted fw-bold">TOTAL PIECES (QTY)</div><div class="fs-4 fw-bold text-dark" id="recapTotalPieces">0</div></div>
+              </div>
+            </div>
+            <div class="col-12 col-md-4">
+              <div class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-3 d-flex align-items-center h-100">
+                <div class="fs-1 text-warning me-3 ms-2"><i class="fa-solid fa-tags"></i></div>
+                <div><div class="small text-muted fw-bold">KATEGORI TERSIMPAN</div><div class="fs-4 fw-bold text-dark" id="recapTotalKategori">0</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-4">
+              <select id="filterKategoriMaster" class="form-select form-select-lg" onchange="renderMasterCatalog()">
+                <option value="">-- Semua Kategori --</option>
+              </select>
+            </div>
+            <div class="col-md-8">
+              <div class="input-group input-group-lg">
+                <span class="input-group-text bg-light border-end-0" style="border-color: #dee2e6;"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                <input type="text" id="searchMaster" class="form-control border-start-0 border-end-0" placeholder="Cari nama artikel..." onkeyup="filterMasterCatalog()">
+                <button class="btn bg-light border border-start-0 text-muted" type="button" id="btnClearSearchMaster" onclick="clearSearchMaster()" style="display: none; border-color: #dee2e6; z-index: 4;"><i class="fa-solid fa-xmark"></i></button>
+              </div>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover align-middle table-master border">
+              <thead>
+                <tr><th>Artikel & SKU</th><th>Warna</th><th class="text-center">Total Stok</th><th>Rincian Size</th><th class="text-center">Status</th><th class="text-center">Aksi Manajemen</th></tr>
+              </thead>
+              <tbody id="masterCatalogBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="managePage">
+        <div class="row g-4 mb-4">
+          <div class="col-12">
+            <div class="pc-card border-start border-success border-5">
+              <h5 class="fw-bold text-dark mb-4"><i class="fa-solid fa-cube text-success me-2"></i>Pusat Kendali Artikel & Stok (Satuan)</h5>
+              <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                  <label class="form-label small fw-bold">1. Kategori Artikel</label>
+                  <select id="controlKategori" class="form-select form-select-lg" onchange="aksiKategoriSatuanBerubah()">
+                    <option value="">-- Pilih Kategori --</option>
+                    <option value="__NEW__" class="text-success fw-bold">+ TAMBAH KATEGORI BARU</option>
+                  </select>
+                  <input type="text" id="inputKategoriBaru" class="form-control mt-2 d-none" placeholder="Ketik nama kategori baru..." style="text-transform: uppercase;">
+                </div>
+                <div class="col-md-5 position-relative">
+                  <label class="form-label small fw-bold">2. Nama Artikel / SKU (Ketik / Klik Disini)</label>
+                  <div class="input-group input-group-lg">
+                    <input type="text" id="comboInputArtikel" class="form-control fw-bold" placeholder="-- Pilih atau Ketik Artikel --" disabled onclick="bukaCustomDropdown()" oninput="saringCustomDropdown()" autocomplete="off">
+                    <button class="btn btn-outline-secondary" type="button" id="btnToggleCombo" onclick="toggleCustomDropdown()" disabled><i class="fa-solid fa-chevron-down"></i></button>
+                  </div>
+                  <div id="comboDropdownMenu" class="shadow rounded border bg-white position-absolute w-100 mt-1 d-none" style="z-index: 2000; max-height: 250px; overflow-y: auto;"></div>
+                  <div class="mt-2 text-start">
+                    <button type="button" id="btnTriggerArtikelBaru" class="btn btn-xs btn-outline-primary fw-bold py-1 px-2 d-none" style="font-size:0.75rem;" onclick="setFormSebagaiArtikelBaru()"><i class="fa-solid fa-plus me-1"></i> Klik disini jika ingin Tambah Artikel Baru</button>
+                  </div>
+                  <div id="formArtikelBaruContainer" class="row g-2 mt-2 d-none">
+                    <div class="col-md-4"><input type="text" id="inputSkuBaru" class="form-control form-control-sm" placeholder="Input SKU Baru..."></div>
+                    <div class="col-md-5"><input type="text" id="inputNamaBaru" class="form-control form-control-sm" placeholder="Input Nama Artikel Baru..."></div>
+                    <div class="col-md-3"><input type="text" id="inputWarnaBaru" class="form-control form-control-sm" placeholder="Warna..."></div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="row g-2">
+                    <div class="col-md-6">
+                      <label class="form-label small fw-bold">Tipe Stok</label>
+                      <select id="controlStatus" class="form-select form-select-lg">
+                        <option value="Real Stock">Real Stock</option>
+                        <option value="Fake Stock">Fake Stock</option>
+                      </select>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label small fw-bold text-primary">ADS Global (Pcs/Hari)</label>
+                      <input type="number" id="controlAds" class="form-control form-control-lg fw-bold text-primary" placeholder="0" min="0">
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div id="matrixStokContainer" class="card p-3 bg-light border-0 d-none mb-4">
+                <h6 class="fw-bold text-dark mb-3"><i class="fa-solid fa-list-ol me-2 text-secondary"></i>Manajemen Alokasi Ukuran (Size)</h6>
+                <div class="table-responsive bg-white rounded shadow-sm">
+                  <table class="table table-bordered align-middle mb-0 text-center" style="font-size:0.95rem;">
+                    <thead class="table-secondary">
+                      <tr><th width="20%">Size / Ukuran</th><th width="40%">Stok Lama Tercatat (Read-Only)</th><th width="40%">Input Stok Perubahan Baru</th></tr>
+                    </thead>
+                    <tbody id="matrixStokBody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="text-end">
+                <button class="btn btn-success btn-lg fw-bold px-5 shadow" id="btnSaveSatuan" onclick="eksekusiSimpanSatuan()" disabled><i class="fa-solid fa-floppy-disk me-2"></i>SIMPAN PERUBAHAN DATA</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="row g-4 mb-4">
+          <div class="col-md-6">
+            <div class="pc-card border-start border-danger border-5 h-100">
+              <h5 class="mb-3 fw-bold text-dark"><i class="fa-solid fa-fire text-danger me-2"></i>Buffer Hero Alert (Total / Sum Per-Artikel)</h5>
+              <p class="text-muted small">Target ketahanan hari aman dipantau dari akumulasi total seluruh ukuran.</p>
+              <div class="input-group input-group-lg"><input type="number" id="inputBufferHero" class="form-control fw-bold border-danger"><span class="input-group-text bg-danger text-white">Hari</span></div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="pc-card border-start border-primary border-5 h-100">
+              <h5 class="mb-3 fw-bold text-dark"><i class="fa-solid fa-mobile-screen text-primary me-2"></i>Buffer Vendor (Per-Size)</h5>
+              <p class="text-muted small">Target batas minimal pengingat stok aman per-ukuran untuk Vendor.</p>
+              <div class="input-group input-group-lg"><input type="number" id="inputBufferVendor" class="form-control fw-bold border-primary"><span class="input-group-text bg-primary text-white">Hari</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="mb-5 text-end">
+          <button class="btn btn-dark fw-bold btn-lg px-5 shadow" id="btnSaveBuffer" onclick="simpanPengaturanBuffer()"><i class="fa-solid fa-floppy-disk me-2"></i>SIMPAN PENGATURAN BUFFER</button>
+        </div>
+        <div class="row g-4">
+          <div class="col-12">
+            <div class="pc-card h-100">
+              <h5 class="fw-bold text-dark mb-4"><i class="fa-solid fa-file-excel me-2 text-success"></i>Upload Bulk Master Data (Excel Horizontal)</h5>
+              <input type="file" id="fileExcel" class="form-control form-control-lg mb-4" accept=".xlsx, .csv">
+              <button class="btn btn-dark w-100 fw-bold btn-lg" id="btnUpload" onclick="prosesUploadExcel()">MULAI BULK IMPORT EXCEL</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="vendorManagePage">
+        <div class="row g-4">
+          <div class="col-lg-4">
+            <div class="pc-card border-start border-primary border-5 sticky-top" style="top:20px;">
+              <h5 class="fw-bold text-dark mb-4" id="titleFormVendor"><i class="fa-solid fa-user-plus text-primary me-2"></i>Daftarkan Vendor Baru</h5>
+              <div class="mb-3">
+                <label class="form-label small fw-bold">Nama Perusahaan / Vendor</label>
+                <input type="text" id="vNama" class="form-control" placeholder="Contoh: PT. Sumber Garmen">
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-bold">Username Akses (ID Link)</label>
+                <input type="text" id="vUser" class="form-control" placeholder="Contoh: vendorsumber" style="text-transform: lowercase;">
+                <small class="text-muted text-xs">Username ini akan menjadi URL unik untuk akses vendor.</small>
+              </div>
+              <div class="mb-4">
+                <label class="form-label small fw-bold text-primary">Pilih Hak Akses Kategori:</label>
+                <div id="vendorKategoriCheckboxes" class="border rounded p-3 bg-light" style="max-height: 150px; overflow-y: auto;"></div>
+                <small class="text-muted text-xs d-block mt-1">*Vendor hanya bisa melihat kategori produk yang dicentang.</small>
+              </div>
+              <button class="btn btn-primary btn-lg fw-bold w-100 shadow-sm" id="btnSaveVendor" onclick="eksekusiTambahVendor()"><i class="fa-solid fa-user-check me-2"></i>SIMPAN AKUN VENDOR</button>
+              <button class="btn btn-outline-secondary btn-lg fw-bold w-100 mt-2 shadow-sm d-none" id="btnCancelEditVendor" onclick="batalkanEditVendor()"><i class="fa-solid fa-times me-2"></i>BATAL EDIT</button>
+            </div>
+          </div>
+          <div class="col-lg-8">
+            <div class="pc-card">
+              <h5 class="fw-bold text-dark mb-4"><i class="fa-solid fa-users text-secondary me-2"></i>Daftar Akun Vendor & Link Publik</h5>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle table-master border text-center">
+                  <thead class="table-dark">
+                    <tr><th>Nama Vendor</th><th>Username Link</th><th>Cakupan Kategori</th><th>Tautan Publik & Aksi</th></tr>
+                  </thead>
+                  <tbody id="tableVendorBody">
+                    <tr><td colspan="4" class="text-muted py-4">Memuat data vendor...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="vendorMonitorPage">
+        <div class="pc-card mb-4 border-start border-info border-5">
+          <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+              <h4 class="mb-1 fw-bold text-dark"><i class="fa-solid fa-chalkboard-user text-info me-2"></i>Monitor Vendor (Mode Batch Save)</h4>
+              <span class="text-muted small">Pilih dan kumpulkan artikel menggunakan tombol (+), lalu klik "Simpan Perubahan ke Cloud" untuk mengamankan data ke database Google Sheets.</span>
+            </div>
+          </div>
+          <div class="card bg-light border-0 shadow-sm p-3 mb-4">
+            <div class="row g-3 align-items-end">
+              <div class="col-md-3">
+                <label class="form-label small fw-bold text-primary">1. Buka Kotretan Vendor</label>
+                <select id="monVendor" class="form-select fw-bold border-primary" onchange="aksiMonVendorBerubah()">
+                  <option value="">-- Pilih Vendor --</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small fw-bold">2. Filter Kategori</label>
+                <select id="monKategori" class="form-select" disabled onchange="aksiMonKategoriAtauStatusBerubah()">
+                  <option value="">-- Pilih Kategori --</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <label class="form-label small fw-bold">3. Filter Tipe (Pencarian)</label>
+                <select id="monStatus" class="form-select" disabled onchange="aksiMonKategoriAtauStatusBerubah()">
+                  <option value="Semua">Semua Stok</option>
+                  <option value="Real Stock">Real Stock</option>
+                  <option value="Fake Stock">Fake Stock</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-bold">4. Pilih Artikel</label>
+                <select id="monArtikel" class="form-select font-monospace" disabled>
+                  <option value="">-- Pilih Artikel --</option>
+                </select>
+              </div>
+              <div class="col-md-1">
+                <button class="btn btn-primary w-100 fw-bold" id="btnTambahMon" disabled onclick="tambahkanKeKotretanLokal()"><i class="fa-solid fa-plus"></i></button>
+              </div>
+            </div>
+          </div>
+          <div class="card p-3 mb-3 bg-white border shadow-sm">
+            <div class="row g-3 align-items-center">
+              <div class="col-12 col-lg-7 d-flex flex-wrap align-items-center gap-2">
+                <div class="input-group input-group-sm w-auto">
+                  <span class="input-group-text bg-light fw-bold text-muted">Tipe Stok:</span>
+                  <select id="viewFilterStatus" class="form-select form-select-sm fw-bold" onchange="renderTabelKotretan()" disabled>
+                    <option value="Semua">Semua Tipe</option>
+                    <option value="Real Stock">Real Stock</option>
+                    <option value="Fake Stock">Fake Stock</option>
+                  </select>
+                </div>
+                <div class="input-group input-group-sm flex-grow-1" style="max-width: 320px;">
+                  <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                  <input type="text" id="searchTableText" class="form-control border-start-0 border-end-0" placeholder="Cari nama/SKU di dalam tabel..." onkeyup="filterTabelInternal()" disabled>
+                  <button class="btn bg-light border border-start-0 text-muted" type="button" id="btnClearSearchTable" onclick="clearSearchTableInternal()" style="display: none; z-index: 4;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <button class="btn btn-xs btn-outline-danger fw-bold py-1" onclick="kosongkanKotretanLokal()" id="btnResetKotretan" disabled><i class="fa-solid fa-trash-can me-1"></i>Reset Layar</button>
+              </div>
+              <div class="col-12 col-lg-5 text-lg-end d-flex justify-content-lg-end flex-wrap gap-2">
+                <button class="btn btn-primary btn-sm fw-bold shadow border border-light" onclick="simpanBatchKotretanKeCloud()" id="btnSaveCloud" disabled><i class="fa-solid fa-cloud-arrow-up me-1"></i>SIMPAN PERUBAHAN KE CLOUD</button>
+                <button class="btn btn-success btn-sm fw-bold shadow-sm" onclick="exportMonitorToExcel()" id="btnExportEx" disabled><i class="fa-solid fa-file-excel me-1"></i>EXCEL</button>
+                <button class="btn btn-danger btn-sm fw-bold shadow-sm" onclick="exportMonitorToPDF()" id="btnExportPdf" disabled><i class="fa-solid fa-file-pdf me-1"></i>PDF</button>
+              </div>
+            </div>
+            <div class="text-muted text-xs mt-2" id="labelActiveVendor"><i class="fa-solid fa-info-circle me-1"></i>Silakan buka nama vendor untuk mengaktifkan workspace kotretan.</div>
+          </div>
+          <div class="table-responsive rounded border shadow-sm bg-white">
+            <table class="table table-hover align-middle border mb-0 text-center" style="font-size:0.85rem;" id="tableKotretan">
+              <thead class="table-dark">
+                <tr><th>Kategori</th><th>Nama Artikel</th><th>SKU</th><th>Tipe & Warna</th><th>S / 28</th><th>M / 30</th><th>L / 32</th><th>XL / 34</th><th>XXL</th><th>Total</th><th class="exclude-export">Aksi</th></tr>
+              </thead>
+              <tbody id="tbodyKotretan">
+                <tr id="rowKosong"><td colspan="11" class="text-muted py-5"><i class="fa-solid fa-users-rectangle fa-2x mb-2 text-secondary"></i><br>Silakan pilih Vendor di atas untuk membuka area kotretannya.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="modalHero" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content" style="border-radius: 15px;">
+        <div class="modal-header border-0 pb-0"><h5 class="modal-title fw-bold text-primary"><i class="fa-solid fa-crown me-2"></i>Pengaturan Hero Alert</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body pt-2">
+          <input type="hidden" id="heroSkuHidden">
+          <div class="mb-3"><label class="fw-bold">Artikel Terpilih:</label><div class="form-control bg-light fs-6" id="heroNamaTampil" readonly></div></div>
+          <div class="mb-3"><label class="fw-bold">Total Stok Saat Ini (Semua Ukuran):</label><div class="form-control bg-light text-primary fw-bold fs-6" id="heroTotalQtyTampil" readonly></div></div>
+          <div class="mb-4"><label class="fw-bold text-dark">Input ADS Global (Pcs/Hari):</label><input type="number" id="heroAdsInput" class="form-control form-control-lg fw-bold border-primary"><small class="text-danger mt-2 d-block">*Set 0 untuk hapus dari Hero Alert.</small></div>
+          <button class="btn btn-primary w-100 fw-bold btn-lg" onclick="simpanHero()">SIMPAN PENGATURAN HERO</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+  <script>
+    // =================================================================
+    // CONFIG BACKEND API & DRIVER KOMUNIKASI FETCH DENGAN TIMEOUT LOKAL
+    // =================================================================
+    
+    // TEMPELKAN API BACKEND GOOGLE WEBAPP ANDA DISINI
+    var API_URL = "https://script.google.com/macros/s/AKfycbySvZbT9jJ3ISeGh4bb7TdLE4W8aFR1Rbw199JOK0H6D_HWAG40lG-oIAuFKGuG1EtR0w/exec";
+    
+    // MESIN UTAMA FETCH DENGAN ABORTCONTROLLER (8 DETIK TIMEOUT)
+    async function callBackend(actionName, payloadData = {}) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // Batas aman 8 detik
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          mode: "cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: actionName, payload: payloadData }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const result = await response.json();
+        if (result.status === "success") {
+          return result.data;
+        } else {
+          throw new Error(result.message || "Terjadi kesalahan internal backend.");
+        }
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === "AbortError") {
+          throw new Error("Koneksi internet Anda sedang terhambat/timeout. Silakan coba klik ulang tombol atau periksa jaringan Anda.");
+        }
+        throw error;
+      }
+    }
+
+    // =================================================================
+    // STATE VARIABEL APLIKASI
+    // =================================================================
+    var globalData = [];
+    var listKategoriGlobal = []; 
+    var activeCategory = ""; 
+    var groupedMaster = [];
+    var GLOBAL_VENDOR_BUFFER = 7;
+
+    // AMBIL PARAMETER URL SECARA DINAMIS (?page=vendor&user=nama)
+    var urlParams = new URLSearchParams(window.location.search);
+    var APP_ROLE_MODE = urlParams.get('page') || "internal";
+    var TARGET_VENDOR_USER = urlParams.get('user') || "";
+
+    window.addEventListener('DOMContentLoaded', function() {
+      // PROTEKSI TAMPILAN LINK PUBLIK VENDOR
+      if (APP_ROLE_MODE === "vendor") {
+        document.querySelectorAll('.menu-internal').forEach(el => el.remove());
+        var pHe = document.getElementById('heroPage'); if(pHe) pHe.remove();
+        var pMa = document.getElementById('masterPage'); if(pMa) pMa.remove();
+        var pMg = document.getElementById('managePage'); if(pMg) pMg.remove();
+        var pVm = document.getElementById('vendorManagePage'); if(pVm) pVm.remove();
+        var pVn = document.getElementById('vendorMonitorPage'); if(pVn) pVn.remove();
+       
+        var welcomeHeader = document.getElementById('vendorWelcomeHeader');
+        if(welcomeHeader) welcomeHeader.classList.remove('d-none');
+        
+        var dashPage = document.getElementById('dashPage');
+        if(dashPage) dashPage.classList.add('show', 'active');
+        
+        // Sembunyikan tombol download excel di HP vendor agar UI bersih & data selalu real-time
+        var btnExcelVendor = document.querySelector("#dashPage .btn-success");
+        if(btnExcelVendor) btnExcelVendor.remove();
+      }
+      loadDashboardData(); 
+    });
+
+    async function loadDashboardData() {
+      var artContainer = document.getElementById('articlesContainer');
+      if(artContainer) artContainer.innerHTML = '<div class="text-center py-5 text-muted"><i class="fa-solid fa-spinner fa-spin fa-3x mb-3"></i>Menyusun data katalog...</div>';
+
+      try {
+        const response = await callBackend("readData");
+        globalData = response.articles || [];
+        GLOBAL_VENDOR_BUFFER = (response.settings && response.settings.vendor) ? response.settings.vendor : 7;
+        
+        var elHero = document.getElementById('inputBufferHero'); if(elHero) elHero.value = response.settings.hero;
+        var elVendor = document.getElementById('inputBufferVendor'); if(elVendor) elVendor.value = response.settings.vendor;
+        
+        if(typeof updateUITextBuffers === "function") updateUITextBuffers(); 
+        
+        if(APP_ROLE_MODE === "vendor" && TARGET_VENDOR_USER !== "") {
+          const vendorList = await callBackend("readVendorData");
+          var match = vendorList.find(v => v.username === TARGET_VENDOR_USER);
+          if(match) {
+            var txtWelcome = document.getElementById('txtNamaVendorWelcome');
+            if(txtWelcome) txtWelcome.innerText = match.nama.toUpperCase();
+
+            listKategoriGlobal = match.akses.map(k => k.trim()).sort();
+            globalData = globalData.filter(item => listKategoriGlobal.includes(item.kategori));
+
+            var prioToggle = document.getElementById('filterPrioOnly'); if(prioToggle) prioToggle.checked = false;
+            buildCategoryTabs(listKategoriGlobal);
+          } else {
+            if(artContainer) artContainer.innerHTML = '<div class="alert alert-danger">Tautan Vendor Tidak Valid atau Akun Telah Dinonaktifkan.</div>';
+          }
+        } else {
+          var catSet = new Set();
+          globalData.forEach(item => { if(item.isAktif === "Aktif") catSet.add(item.kategori); });
+          listKategoriGlobal = Array.from(catSet).sort();
+          
+          prepareMasterCatalogData();
+          buildCategoryTabs(listKategoriGlobal); 
+          buildKategoriDropdown(); 
+          buildMasterCategoryDropdown();
+          renderHeroAlert();
+          renderCards();     
+          inisialisasiCheckboxAksesVendor();
+          renderVendorManageTable();
+          inisialisasiDropdownMonitorVendor();
+        }
+      } catch (err) {
+        Swal.fire("Koneksi Terputus", err.message, "error");
+        if(artContainer) artContainer.innerHTML = `<div class="alert alert-danger"><i class="fa-solid fa-circle-exclamation me-2"></i>Gagal Sinkronisasi Cloud: ${err.message}</div>`;
+      }
+    }
+
+    // =================================================================
+    // MODUL CODE LOGIC: VIEW HERO ALERT
+    // =================================================================
+    function filterHeroAlert() {
+      var input = document.getElementById('searchHero');
+      var btn = document.getElementById('btnClearSearchHero');
+      if (btn) {
+        if (input && input.value.trim() !== "") btn.style.setProperty('display', 'block', 'important');
+        else btn.style.setProperty('display', 'none', 'important');
+      }
+      renderHeroAlert();
+    }
+    function clearSearchHero() {
+      var input = document.getElementById('searchHero'); if (input) { input.value = ""; input.focus(); }
+      var btn = document.getElementById('btnClearSearchHero'); if (btn) btn.style.setProperty('display', 'none', 'important');
+      renderHeroAlert();
+    }
+    function renderHeroAlert() {
+      var tbody = document.getElementById('heroAlertBody'); if(!tbody) return;
+      var elDisp = document.getElementById('displayBufferHero');
+      var elInput = document.getElementById('inputBufferHero');
+      if (elDisp) { var heroDays = (elInput && elInput.value) ? elInput.value : 14; elDisp.innerText = heroDays + " Hari"; }
+      var searchHero = document.getElementById('searchHero') ? document.getElementById('searchHero').value.toLowerCase() : "";
+      var katFilterHero = document.getElementById('filterKategoriHero') ? document.getElementById('filterKategoriHero').value : "";
+      var targetHari = document.getElementById('inputBufferHero') ? (parseFloat(document.getElementById('inputBufferHero').value) || 14) : 14;
+      
+      var html = ""; var countTotal = 0; var countAman = 0; var countKritis = 0;
+      var groupedData = {};
+      
+      globalData.forEach(function(item) {
+        if (!item) return;
+        var sku = item.sku;
+        if (!groupedData[sku]) {
+          groupedData[sku] = { kategori: item.kategori, sku: sku, nama: item.nama, warna: item.warna, status: item.status, isAktif: item.isAktif, adsGlobal: parseFloat(item.adsGlobal) || 0, totalQty: 0, latestTimestamp: "-", sizes: [] };
+        }
+        groupedData[sku].totalQty += parseInt(item.qty) || 0;
+        groupedData[sku].sizes.push({ tren: item.tren });
+        if (item.timestamp && item.timestamp !== "-") {
+          if (groupedData[sku].latestTimestamp === "-") { groupedData[sku].latestTimestamp = item.timestamp; } 
+          else {
+            var curParts = item.timestamp.split(" "); var maxParts = groupedData[sku].latestTimestamp.split(" ");
+            if (curParts.length >= 2 && maxParts.length >= 2) {
+              var curScore = curDateArr = curParts[0].split("/")[2] + curParts[0].split("/")[1] + curParts[0].split("/")[0] + curParts[1].replace(":", "");
+              var maxScore = maxDateArr = maxParts[0].split("/")[2] + maxParts[0].split("/")[1] + maxParts[0].split("/")[0] + maxParts[1].replace(":", "");
+              if (parseInt(curScore) > parseInt(maxScore)) groupedData[sku].latestTimestamp = item.timestamp;
+            }
+          }
+        }
+      });
+
+      var heroArticles = Object.values(groupedData).filter(function(item) {
+        return item.isAktif === "Aktif" && item.adsGlobal > 0 && (item.nama.toLowerCase().includes(searchHero) || item.sku.toLowerCase().includes(searchHero)) && (katFilterHero === "" || item.kategori === katFilterHero);
+      });
+
+      if(heroArticles.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center py-5 text-muted"><i class="fa-solid fa-box-open fa-2x mb-2"></i><br>Tidak ada data Hero Alert saat ini.</td></tr>';
+        document.getElementById('heroCountTotal').innerText = "0"; document.getElementById('heroCountAman').innerText = "0"; document.getElementById('heroCountKritis').innerText = "0"; return;
+      }
+
+      var groupedByCategory = {};
+      heroArticles.forEach(function(art) { if(!groupedByCategory[art.kategori]) groupedByCategory[art.kategori] = []; groupedByCategory[art.kategori].push(art); });
+
+      Object.keys(groupedByCategory).sort().forEach(function(kategori) {
+        html += `<tr><td colspan="7" class="bg-light text-dark fw-bold text-uppercase border-bottom"><i class="fa-solid fa-tags me-2 text-primary"></i>Kategori: ${kategori}</td></tr>`;
+        groupedByCategory[kategori].forEach(function(art) {
+          countTotal++; var curQty = art.totalQty; var curAds = art.adsGlobal;
+          var estimasiHari = curAds > 0 ? Math.floor(curQty / curAds) : 0;
+          var isKritis = estimasiHari < targetHari; if(isKritis) countKritis++; else countAman++;
+          var targetStokAman = curAds * targetHari; var selisih = curQty - targetStokAman;
+          var rowClass = isKritis ? 'row-hero-kritis' : 'row-hero-aman';
+          var textStyle = isKritis ? 'kritis-text' : 'fw-bold text-success';
+          var iconStatus = isKritis ? '<i class="fa-solid fa-triangle-exclamation text-danger"></i> Kritis' : '<i class="fa-solid fa-check-circle text-success"></i> Aman';
+          var trendIcon = '';
+          if(art.sizes && Array.isArray(art.sizes)) {
+            if(art.sizes.some(s => s.tren === '▲') && !art.sizes.some(s => s.tren === '▼')) trendIcon = '<i class="fa-solid fa-arrow-trend-up text-success ms-2 fs-5"></i>';
+            else if(art.sizes.some(s => s.tren === '▼') && !art.sizes.some(s => s.tren === '▲')) trendIcon = '<i class="fa-solid fa-arrow-trend-down text-danger ms-2 fs-5"></i>';
+          }
+          var badgeSelisih = selisih < 0 ? `<span class="badge bg-danger ms-3" style="font-size: 0.8rem;"><i class="fa-solid fa-minus me-1"></i>${Math.abs(selisih)} pcs</span>` : `<span class="badge bg-success ms-3" style="font-size: 0.8rem;"><i class="fa-solid fa-plus me-1"></i>+${selisih} pcs</span>`;
+          var tglStr = "-", jamStr = "-"; if(art.latestTimestamp && art.latestTimestamp !== "-") { var spl = art.latestTimestamp.split(" "); if(spl.length >= 2) { tglStr = spl[0]; jamStr = spl[1]; } else { tglStr = art.latestTimestamp; } }
+
+          html += `<tr class="${rowClass}">
+            <td class="ps-3"><div class="fw-bold fs-6 text-dark">${art.nama}</div><div class="small text-muted font-monospace">${art.sku}</div></td>
+            <td><span class="badge bg-white text-dark border p-2">${art.warna || '-'}</span></td>
+            <td class="text-center fw-bold fs-4">${curQty} ${trendIcon}</td>
+            <td class="align-middle"><div class="d-flex align-items-center"><div class="text-primary fw-bold fs-5">${curAds} <span class="small fw-normal text-muted">/hr</span></div>${badgeSelisih}</div></td>
+            <td class="text-center ${textStyle} fs-5">${estimasiHari} Hr</td>
+            <td class="text-center fw-bold">${iconStatus}</td>
+            <td class="text-center align-middle"><div class="d-inline-flex align-items-center gap-2 px-2 py-1 bg-light rounded border text-nowrap" style="font-size: 0.85rem;"><span class="text-dark fw-bold"><i class="fa-regular fa-calendar-check text-muted me-1"></i>${tglStr}</span><span class="text-muted">|</span><span class="text-primary fw-bold"><i class="fa-regular fa-clock text-muted me-1"></i>${jamStr}</span></div></td>
+          </tr>`;
+        });
+      });
+      tbody.innerHTML = html;
+      document.getElementById('heroCountTotal').innerText = countTotal; document.getElementById('heroCountAman').innerText = countAman; document.getElementById('heroCountKritis').innerText = countKritis;
+    }
+    function getFilteredHeroData() {
+      var searchHero = document.getElementById('searchHero') ? document.getElementById('searchHero').value.toLowerCase() : "";
+      var katFilterHero = document.getElementById('filterKategoriHero') ? document.getElementById('filterKategoriHero').value : "";
+      var targetHari = parseFloat(document.getElementById('inputBufferHero') ? document.getElementById('inputBufferHero').value : 14) || 14;
+      var groupedData = {};
+      globalData.forEach(function(item) {
+        if (!item) return;
+        if (!groupedData[item.sku]) groupedData[item.sku] = { kategori: item.kategori, sku: item.sku, nama: item.nama, warna: item.warna, isAktif: item.isAktif, adsGlobal: parseFloat(item.adsGlobal) || 0, totalQty: 0 };
+        groupedData[item.sku].totalQty += parseInt(item.qty) || 0;
+      });
+      return Object.values(groupedData).filter(function(item) {
+        return (item.isAktif === "Aktif" && item.adsGlobal > 0) && (item.nama.toLowerCase().includes(searchHero) || item.sku.toLowerCase().includes(searchHero)) && (katFilterHero === "" || item.kategori === katFilterHero);
+      }).map(function(art) {
+        var estimasiHari = art.adsGlobal > 0 ? Math.floor(art.totalQty / art.adsGlobal) : 0;
+        var isKritis = estimasiHari < targetHari;
+        return { ...art, estimasiHari, isKritis, selisih: art.totalQty - (art.adsGlobal * targetHari) };
+      }).sort((a, b) => a.kategori.localeCompare(b.kategori));
+    }
+    function exportHeroToExcel() {
+      var data = getFilteredHeroData(); if(data.length === 0) { Swal.fire('Tabel Kosong', 'Tidak ada data Hero untuk diexport.', 'warning'); return; }
+      var wsData = [["LAPORAN MONITORING ARTIKEL HERO - SCREAMOUS"],["TANGGAL:", new Date().toLocaleDateString('id-ID')],[],["KATEGORI", "NAMA ARTIKEL", "SKU", "WARNA", "TOTAL STOK", "ADS GLOBAL", "ESTIMASI KETAHANAN", "SELISIH STOK", "STATUS"]];
+      data.forEach(r => wsData.push([r.kategori, r.nama, r.sku, r.warna, r.totalQty, r.adsGlobal, r.estimasiHari + " Hari", r.selisih, r.isKritis ? "Kritis" : "Aman"]));
+      var wb = XLSX.utils.book_new(); var ws = XLSX.utils.aoa_to_sheet(wsData); XLSX.utils.book_append_sheet(wb, ws, "HERO_ALERT"); XLSX.writeFile(wb, "Laporan_Hero_Alert.xlsx");
+    }
+    function exportHeroToPDF() {
+      var data = getFilteredHeroData(); if(data.length === 0) { Swal.fire('Tabel Kosong', 'Tidak ada data Hero untuk diexport.', 'warning'); return; }
+      const { jsPDF } = window.jspdf; const doc = new jsPDF('landscape');
+      doc.setFontSize(16); doc.text("Laporan Monitoring Artikel Hero - SCREAMOUS", 14, 20);
+      var bodyData = data.map(r => [r.kategori, r.nama, r.sku, r.warna, r.totalQty.toString(), r.adsGlobal.toString(), r.estimasiHari.toString() + " Hari", (r.selisih > 0 ? "+" : "") + r.selisih.toString(), r.isKritis ? "KRITIS" : "AMAN"]);
+      doc.autoTable({ startY: 34, head: [['Kategori', 'Nama Artikel', 'SKU', 'Warna', 'Total Stok', 'ADS', 'Ketahanan', 'Selisih', 'Status']], body: bodyData, theme: 'grid', headStyles: { fillColor: [220, 53, 69] } });
+      doc.save("Laporan_Hero_Alert.pdf");
+    }
+
+    // =================================================================
+    // MODUL CODE LOGIC: VIEW VENDOR DISPLAY
+    // =================================================================
+    function buildCategoryTabs(categories) {
+      var tabHtml = "";
+      if(categories.length > 0) {
+        if(!activeCategory || !categories.includes(activeCategory)) activeCategory = categories[0];
+        categories.forEach(function(cat) {
+          tabHtml += `<li class="nav-item"><button class="nav-link ${cat === activeCategory ? 'active fw-bold' : ''}" onclick="switchCategory('${cat}')" type="button" style="border:none; border-radius:8px; margin-right:5px;">${cat}</button></li>`;
+        });
+      }
+      var tabsEl = document.getElementById('categoryTabs'); if(tabsEl) tabsEl.innerHTML = tabHtml;
+      renderCards();
+    }
+    function switchCategory(cat) { activeCategory = cat; buildCategoryTabs(listKategoriGlobal); }
+    function updateUITextBuffers() {
+      var elDisp = document.getElementById('displayBufferVendor'); var elInput = document.getElementById('inputBufferVendor');
+      if(elDisp && elInput) elDisp.innerText = elInput.value + " Hari";
+    }
+    function renderCards() {
+      var container = document.getElementById('articlesContainer'); if(!container) return;
+      var keyword = document.getElementById('searchArt') ? document.getElementById('searchArt').value.toLowerCase().trim() : "";
+      var vendorBufferDays = GLOBAL_VENDOR_BUFFER;
+      var filterPrioChecked = document.getElementById('filterPrioOnly') ? document.getElementById('filterPrioOnly').checked : false;
+      var filterTipeStok = document.getElementById('filterTipeStok') ? document.getElementById('filterTipeStok').value : "Semua";
+      var grouped = {};
+      
+      globalData.forEach(function(item) {
+        if(item.kategori !== activeCategory || item.isAktif !== "Aktif") return;
+        if(keyword !== "" && !item.sku.toLowerCase().includes(keyword) && !item.nama.toLowerCase().includes(keyword)) return;
+        if(!grouped[item.sku]) {
+          grouped[item.sku] = { sku: item.sku, nama: item.nama, kategori: item.kategori, warna: item.warna, status: item.status, adsGlobal: item.adsGlobal, timestamp: item.timestamp, isPriority: item.isPriority, sizes: [] };
+        }
+        grouped[item.sku].sizes.push({ size: item.size, qty: item.qty, tren: item.tren });
+      });
+
+      var html = "";
+      Object.keys(grouped).forEach(function(key) {
+        var art = grouped[key]; if (filterPrioChecked && !art.isPriority) return; if (filterTipeStok !== "Semua" && art.status !== filterTipeStok) return;
+        var badgeClass = art.status.toLowerCase().includes('fake') ? 'badge-fake' : 'badge-real';
+        var adaSizeKritis = false; var sizeBoxesHtml = ""; var limitBatasKritis = Math.ceil(art.adsGlobal * vendorBufferDays);
+        var totalStokArtikel = 0; art.sizes.forEach(s => totalStokArtikel += parseInt(s.qty) || 0);
+        
+        var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
+        art.sizes.sort((a, b) => (urutanBaku.indexOf(a.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(a.size.toUpperCase())) - (urutanBaku.indexOf(b.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(b.size.toUpperCase())));
+        
+        art.sizes.forEach(function(sz) {
+          var isSizeKritis = sz.qty <= limitBatasKritis; if(isSizeKritis) adaSizeKritis = true;
+          var trendIcon = sz.tren === '▲' ? '<i class="fa-solid fa-arrow-trend-up trend-up ms-1"></i>' : (sz.tren === '▼' ? '<i class="fa-solid fa-arrow-trend-down trend-down ms-1"></i>' : '');
+          sizeBoxesHtml += `<div class="size-box ${isSizeKritis ? 'box-kurang' : ''}" onclick="lompatKeUpdateManual('${art.kategori}', '${art.sku}', '${sz.size}')"><div class="size-name">${sz.size}</div><div class="size-qty">${sz.qty}${trendIcon}</div></div>`;
+        });
+        
+        var btnPriorityAction = (typeof APP_ROLE_MODE !== "undefined" && APP_ROLE_MODE !== "vendor") ? `<div class="mt-3 pt-3 border-top border-secondary-subtle"><button class="btn btn-sm w-100 fw-bold shadow-sm ${art.isPriority ? 'btn-warning text-dark' : 'btn-outline-secondary'}" onclick="eksekusiTogglePrioritas('${art.sku}', ${!art.isPriority})"><i class="fa-solid fa-star me-1"></i> ${art.isPriority ? 'Hapus Status Prioritas' : 'Jadikan Prioritas Vendor'}</button></div>` : "";
+
+        html += `<div class="article-card ${adaSizeKritis ? 'card-kurang' : ''} ${art.isPriority ? 'border border-warning border-3 bg-light' : ''}">
+          <div class="d-flex justify-content-between align-items-start">
+            <div><span class="sku-text">${art.sku}</span><div class="article-title">${art.nama}</div><span class="text-muted small"><i class="fa-solid fa-palette me-1"></i> WRNA: ${art.warna}</span></div>
+            <div class="text-end">${art.isPriority ? '<span class="badge bg-warning text-dark mb-1 me-2"><i class="fa-solid fa-star me-1"></i>PRIORITAS</span>' : ''}<span class="badge ${badgeClass} mb-1">${art.status}</span><div class="text-muted text-xs mt-1">ADS: <strong>${art.adsGlobal}</strong> | TOTAL: <strong class="text-primary">${totalStokArtikel}</strong></div></div>
+          </div>
+          <div class="size-container mt-3">${sizeBoxesHtml}</div>
+          ${btnPriorityAction}
+          <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-light"><button class="btn btn-link text-primary text-xs fw-bold p-0 text-decoration-none" onclick="bukaLogHistory('${art.sku}')"><i class="fa-solid fa-clock-rotate-left me-1"></i> Lihat Log 5 Hari</button><div class="text-muted text-xs"><i class="fa-regular fa-clock me-1"></i>Update: ${art.timestamp}</div></div>
+        </div>`;
+      });
+      container.innerHTML = html === "" ? "<div class='text-center py-5 text-muted'><i class='fa-solid fa-box-open fa-2x mb-2'></i><br>Tidak ada artikel yang cocok.</div>" : html;
+    }
+    function filterDisplay() {
+      var input = document.getElementById('searchArt'); var btn = document.getElementById('btnClearSearchArt');
+      if (btn) { if (input && input.value.trim() !== "") btn.style.setProperty('display', 'block', 'important'); else btn.style.setProperty('display', 'none', 'important'); }
+      renderCards();
+    }
+    function clearSearchArt() {
+      var input = document.getElementById('searchArt'); if (input) { input.value = ""; input.focus(); }
+      var btn = document.getElementById('btnClearSearchArt'); if (btn) btn.style.setProperty('display', 'none', 'important');
+      renderCards();
+    }
+    async function eksekusiTogglePrioritas(skuTarget, statusPrioritasBaru) {
+      Swal.fire({ title: 'Memperbarui Prioritas...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+      try {
+        await callBackend("setPriorityStatus", { sku: skuTarget, setAsPriority: statusPrioritasBaru });
+        Swal.close();
+        globalData.forEach(function(item) { if(item.sku === skuTarget) item.isPriority = statusPrioritasBaru; });
+        renderCards();
+      } catch (err) { Swal.fire("Gagal", err.message, "error"); }
+    }
+    async function bukaLogHistory(sku) {
+      var matchArt = globalData.find(i => i.sku === sku); var namaArtikel = matchArt ? matchArt.nama : sku;
+      Swal.fire({ title: 'Memuat Riwayat Stok...', html: '<div class="py-3 text-center"><i class="fa-solid fa-spinner fa-spin fa-2x text-primary"></i></div>', showConfirmButton: false });
+      try {
+        const logs = await callBackend("getStockLog", { sku: sku });
+        if (!logs || logs.length === 0) {
+          Swal.fire({ title: 'Riwayat Stok', html: `<div class="text-muted py-3">Belum ada riwayat pergerakan stok untuk artikel <strong>${namaArtikel}</strong>.</div>` }); return;
+        }
+        var tableRows = "";
+        logs.forEach(log => {
+          tableRows += `<tr><td class="small font-monospace text-start">${log.timestamp}</td><td>${log.size}</td><td>${log.oldQty} → ${log.newQty}</td><td class="fw-bold ${log.perubahan.includes('+')?'text-success':'text-danger'}">${log.perubahan}</td></tr>`;
+        });
+        Swal.fire({
+          title: `<span>Log Pergerakan: <strong>${namaArtikel}</strong></span>`,
+          html: `<div class="table-responsive" style="max-height: 300px;"><table class="table table-sm table-bordered text-center mb-0"><thead><tr><th>Waktu</th><th>Sz</th><th>Alur</th><th>Perubahan</th></tr></thead><tbody>${tableRows}</tbody></table></div>`,
+          width: '750px', confirmButtonText: 'Tutup'
+        });
+      } catch(err) { Swal.fire("Gagal", err.message, "error"); }
+    }
+    function exportVendorToExcel() {
+      var wsData = [["KATALOG VENDOR DISPLAY - SCREAMOUS"],["KATEGORI:", activeCategory],["TANGGAL:", new Date().toLocaleDateString('id-ID')],[],["SKU", "NAMA ARTIKEL", "TIPE STOK", "WARNA", "STATUS PRIORITAS"]];
+      var grouped = {}; globalData.forEach(function(item) {
+        if(item.kategori !== activeCategory || item.isAktif !== "Aktif") return;
+        if(!grouped[item.sku]) grouped[item.sku] = { sku: item.sku, nama: item.nama, status: item.status, warna: item.warna, isPriority: item.isPriority, sizes: {} };
+        grouped[item.sku].sizes[item.size] = item.qty;
+      });
+      var allSizes = new Set(); Object.values(grouped).forEach(art => Object.keys(art.sizes).forEach(sz => allSizes.add(sz)));
+      var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
+      var sizeHeaders = Array.from(allSizes).sort((a,b)=>urutanBaku.indexOf(a.toUpperCase())-urutanBaku.indexOf(b.toUpperCase()));
+      wsData[4] = wsData[4].concat(sizeHeaders);
+      Object.values(grouped).forEach(art => {
+        var row = [art.sku, art.nama, art.status, art.warna, art.isPriority ? "PRIORITAS" : "-"];
+        sizeHeaders.forEach(sz => row.push(art.sizes[sz] || 0)); wsData.push(row);
+      });
+      var wb = XLSX.utils.book_new(); var ws = XLSX.utils.aoa_to_sheet(wsData); XLSX.utils.book_append_sheet(wb, ws, "Vendor_Display"); XLSX.writeFile(wb, `Display_${activeCategory}.xlsx`);
+    }
+
+    // =================================================================
+    // MODUL CODE LOGIC: VIEW MASTER KATALOG & MODAL HERO
+    // =================================================================
+    function filterMasterCatalog() {
+      var input = document.getElementById('searchMaster'); var btn = document.getElementById('btnClearSearchMaster');
+      if (btn) { if (input && input.value.trim() !== "") btn.style.setProperty('display', 'block', 'important'); else btn.style.setProperty('display', 'none', 'important'); }
+      renderMasterCatalog();
+    }
+    function clearSearchMaster() {
+      var input = document.getElementById('searchMaster'); if (input) { input.value = ""; input.focus(); }
+      var btn = document.getElementById('btnClearSearchMaster'); if (btn) btn.style.setProperty('display', 'none', 'important');
+      renderMasterCatalog();
+    }
+    function prepareMasterCatalogData() {
+      var grouped = {};
+      globalData.forEach(function(item) {
+        if (!item || !item.sku) return;
+        if (!grouped[item.sku]) {
+          grouped[item.sku] = { sku: item.sku, nama: item.nama, kategori: item.kategori, warna: item.warna, timestamp: item.timestamp, isAktif: item.isAktif, adsGlobal: parseFloat(item.adsGlobal) || 0, totalQty: 0, sizes: {} };
+        }
+        var qty = parseInt(item.qty) || 0; grouped[item.sku].totalQty += qty;
+        if(item.size) { if(!grouped[item.sku].sizes[item.size]) grouped[item.sku].sizes[item.size] = 0; grouped[item.sku].sizes[item.size] += qty; }
+      });
+      groupedMaster = Object.values(grouped); renderMasterCatalog();
+    }
+    function buildMasterCategoryDropdown() {
+      var filterKat = document.getElementById('filterKategoriMaster'); var filterKatHero = document.getElementById('filterKategoriHero');
+      if(filterKat) filterKat.innerHTML = '<option value="">-- Semua Kategori --</option>'; if(filterKatHero) filterKatHero.innerHTML = '<option value="">-- Semua Kategori Hero --</option>';
+      listKategoriGlobal.forEach(cat => {
+        if(filterKat) filterKat.insertAdjacentHTML('beforeend', `<option value="${cat}">${cat}</option>`);
+        if(filterKatHero) filterKatHero.insertAdjacentHTML('beforeend', `<option value="${cat}">${cat}</option>`);
+      });
+    }
+    function renderMasterCatalog() {
+      var tbody = document.getElementById('masterCatalogBody'); if(!tbody) return;
+      var search = document.getElementById('searchMaster') ? document.getElementById('searchMaster').value.toLowerCase().trim() : "";
+      var kategoriFilter = document.getElementById('filterKategoriMaster') ? document.getElementById('filterKategoriMaster').value : "";
+      
+      var filtered = groupedMaster.filter(function(item) {
+        return (item.nama.toLowerCase().includes(search) || item.sku.toLowerCase().includes(search)) && (kategoriFilter === "" || item.kategori === kategoriFilter);
+      }).sort((a,b) => a.kategori.localeCompare(b.kategori) || a.nama.localeCompare(b.nama));
+
+      document.getElementById('recapTotalArtikel').innerText = filtered.length.toLocaleString('id-ID');
+      var totalPieces = 0; var setKategori = new Set(); filtered.forEach(art => { totalPieces += art.totalQty; setKategori.add(art.kategori); });
+      document.getElementById('recapTotalPieces').innerText = totalPieces.toLocaleString('id-ID');
+      document.getElementById('recapTotalKategori').innerText = setKategori.size;
+
+      tbody.innerHTML = ""; if(filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Tidak ada data ditemukan.</td></tr>`; return; }
+      var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"]; var html = "";
+
+      filtered.forEach(function(art) {
+        var sizeBadges = "";
+        Object.keys(art.sizes).sort((a, b) => urutanBaku.indexOf(a.toUpperCase()) - urutanBaku.indexOf(b.toUpperCase())).forEach(sz => {
+          sizeBadges += `<span class="badge bg-secondary bg-opacity-10 text-dark border border-secondary me-1 mb-1">${sz}: <strong>${art.sizes[sz]}</strong></span>`;
+        });
+        var btnToggleAktif = art.isAktif === "Aktif" 
+          ? `<button class="btn btn-sm btn-outline-secondary w-100 mb-2" onclick="ubahStatusMaster('${art.sku}', 'Non-Aktif')"><i class="fa-solid fa-eye-slash me-1"></i> Non-Aktif</button>` 
+          : `<button class="btn btn-sm btn-success w-100 mb-2" onclick="ubahStatusMaster('${art.sku}', 'Aktif')"><i class="fa-solid fa-eye me-1"></i> Aktifkan</button>`;
+
+        html += `<tr>
+          <td><div class="fw-bold text-dark fs-6">${art.nama}</div><div class="text-muted font-monospace small">${art.sku}</div></td>
+          <td class="align-middle"><span class="badge bg-light text-dark border p-2">${art.warna || '-'}</span></td>
+          <td class="text-center fs-5 fw-bold align-middle">${art.totalQty}</td>
+          <td class="align-middle">${sizeBadges}</td>
+          <td class="text-center align-middle"><span class="badge ${art.isAktif==='Aktif'?'bg-success':'bg-secondary'} w-100 py-2">${art.isAktif}</span>${art.adsGlobal>0?`<span class="badge bg-warning text-dark w-100 mt-1 py-1"><i class="fa-solid fa-crown"></i> Hero (ADS:${art.adsGlobal})</span>`:''}</td>
+          <td class="align-middle">${btnToggleAktif}<button class="btn btn-sm ${art.adsGlobal>0?'btn-outline-danger':'btn-outline-primary'} w-100" onclick="bukaModalHero('${art.sku}')">${art.adsGlobal>0?'<i class="fa-solid fa-times me-1"></i> Ubah ADS':'<i class="fa-solid fa-star me-1"></i> Jadi Hero'}</button></td>
+        </tr>`;
+      });
+      tbody.innerHTML = html;
+    }
+    async function ubahStatusMaster(sku, statusBaru) {
+      Swal.fire({ title: 'Memproses Status...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+      try {
+        await callBackend("toggleStatusAktif", { sku: sku, statusBaru: statusBaru });
+        Swal.close();
+        globalData.forEach(item => { if(item.sku === sku) item.isAktif = statusBaru; });
+        prepareMasterCatalogData(); renderCards(); renderHeroAlert();
+        Swal.fire({ icon: 'success', title: 'Status Diperbarui', text: `Artikel ${sku} berstatus ${statusBaru}!`, timer: 1500, showConfirmButton: false });
+      } catch (err) { Swal.fire("Gagal", err.message, "error"); }
+    }
+    var modalHeroObj = null;
+    function bukaModalHero(sku) {
+      var match = groupedMaster.find(item => item.sku === sku); if(!match) return;
+      document.getElementById('heroSkuHidden').value = match.sku; document.getElementById('heroNamaTampil').innerText = match.nama;
+      document.getElementById('heroTotalQtyTampil').innerText = match.totalQty + " pcs"; document.getElementById('heroAdsInput').value = match.adsGlobal > 0 ? match.adsGlobal : '';
+      if(!modalHeroObj) { modalHeroObj = new bootstrap.Modal(document.getElementById('modalHero')); } modalHeroObj.show();
+    }
+    async function simpanHero() {
+      var sku = document.getElementById('heroSkuHidden').value; var adsValue = parseFloat(document.getElementById('heroAdsInput').value) || 0;
+      modalHeroObj.hide(); Swal.fire({ title: 'Menyimpan Pengaturan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+      try {
+        await callBackend("setHeroADS", { sku: sku, adsValue: adsValue });
+        loadDashboardData(); Swal.fire("Tersimpan", "Pengaturan Hero Alert berhasil diamankan!", "success");
+      } catch (err) { Swal.fire("Gagal", err.message, "error"); }
+    }
+    function exportMasterToExcel() {
+      var wsData = [["BACKUP DATABASE - MASTER KATALOG SCREAMOUS"],["TANGGAL EXPORT:", new Date().toLocaleDateString('id-ID')],[],["KATEGORI", "SKU", "NAMA ARTIKEL", "WARNA", "TOTAL STOK", "STATUS AKTIF"]];
+      var allSizes = new Set(); groupedMaster.forEach(art => Object.keys(art.sizes).forEach(sz => allSizes.add(sz)));
+      var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
+      var sizeHeaders = Array.from(allSizes).sort((a,b)=>urutanBaku.indexOf(a.toUpperCase())-urutanBaku.indexOf(b.toUpperCase()));
+      wsData[3] = wsData[3].concat(sizeHeaders);
+      groupedMaster.forEach(art => {
+        var row = [art.kategori, art.sku, art.nama, art.warna, art.totalQty, art.isAktif]; sizeHeaders.forEach(sz => row.push(art.sizes[sz] || 0)); wsData.push(row);
+      });
+      var wb = XLSX.utils.book_new(); var ws = XLSX.utils.aoa_to_sheet(wsData); XLSX.utils.book_append_sheet(wb, ws, "Master_Katalog"); XLSX.writeFile(wb, "Backup_Master_Katalog.xlsx");
+    }
+
+    // =================================================================
+    // MODUL CODE LOGIC: VIEW MANAJEMEN STOK
+    // =================================================================
+    var localArticlesList = []; var currentSelectedSku = "";
+    function buildKategoriDropdown() {
+      var select = document.getElementById('controlKategori'); if(!select) return;
+      select.innerHTML = '<option value="">-- Pilih Kategori --</option><option value="__NEW__" class="text-success fw-bold">+ TAMBAH KATEGORI BARU</option>';
+      listKategoriGlobal.forEach(cat => select.insertAdjacentHTML('beforeend', `<option value="${cat}">${cat}</option>`));
+    }
+    function aksiKategoriSatuanBerubah() {
+      var selectKat = document.getElementById('controlKategori').value; var inputKatBaru = document.getElementById('inputKategoriBaru');
+      var inputCombo = document.getElementById('comboInputArtikel'); var btnToggle = document.getElementById('btnToggleCombo');
+      var btnTrigger = document.getElementById('btnTriggerArtikelBaru');
+      
+      inputKatBaru.classList.add('d-none'); inputCombo.value = ""; inputCombo.disabled = true; btnToggle.disabled = true; btnTrigger.classList.add('d-none');
+      currentSelectedSku = ""; localArticlesList = []; tutupCustomDropdown(); resetFormMatriksSatuan();
+
+      if (selectKat === "__NEW__") { inputKatBaru.classList.remove('d-none'); inputKatBaru.focus(); setFormSebagaiArtikelBaru(); } 
+      else if (selectKat !== "") {
+        btnTrigger.classList.remove('d-none'); var uniqueMap = {};
+        globalData.forEach(item => { if(item.kategori === selectKat && item.isAktif === "Aktif") uniqueMap[item.sku] = item.nama; });
+        Object.keys(uniqueMap).sort().forEach(sku => localArticlesList.push({ sku: sku, nama: uniqueMap[sku], fullText: `${uniqueMap[sku]} [${sku}]` }));
+        if(localArticlesList.length > 0) { inputCombo.disabled = false; btnToggle.disabled = false; renderCustomDropdownOptions(localArticlesList); } 
+        else { inputCombo.placeholder = "-- Kategori ini tidak memiliki artikel --"; }
+      }
+    }
+    function renderCustomDropdownOptions(list) {
+      var container = document.getElementById('comboDropdownMenu'); container.innerHTML = "";
+      if(list.length === 0) { container.innerHTML = `<div class="p-3 text-center text-muted small"><i class="fa-solid fa-eye-slash me-1"></i> Artikel tidak ditemukan</div>`; return; }
+      list.forEach(item => {
+        container.insertAdjacentHTML('beforeend', `<div class="p-2 border-bottom combo-item text-dark fw-bold" style="cursor: pointer; font-size: 0.95rem;" onclick="pilihArtikelDariCombo('${item.sku}')"><i class="fa-solid fa-box text-muted me-2 small"></i>${item.fullText}</div>`);
+      });
+    }
+    function toggleCustomDropdown() { var menu = document.getElementById('comboDropdownMenu'); if(menu.classList.contains('d-none')) bukaCustomDropdown(); else tutupCustomDropdown(); }
+    function bukaCustomDropdown() { var menu = document.getElementById('comboDropdownMenu'); if(menu && !document.getElementById('comboInputArtikel').disabled) menu.classList.remove('d-none'); }
+    function tutupCustomDropdown() { var menu = document.getElementById('comboDropdownMenu'); if(menu) menu.classList.add('d-none'); }
+    function saringCustomDropdown() {
+      bukaCustomDropdown(); var keyword = document.getElementById('comboInputArtikel').value.toLowerCase();
+      var filtered = localArticlesList.filter(item => item.fullText.toLowerCase().includes(keyword)); renderCustomDropdownOptions(filtered);
+      if(keyword === "") { currentSelectedSku = ""; document.getElementById('matrixStokContainer').classList.add('d-none'); document.getElementById('btnSaveSatuan').disabled = true; }
+    }
+    function pilihArtikelDariCombo(sku) {
+      var match = localArticlesList.find(i => i.sku === sku); document.getElementById('comboInputArtikel').value = match ? match.fullText : "[ARTIKEL BARU]";
+      currentSelectedSku = sku; tutupCustomDropdown(); bukaMatriksUkuranSatuan(sku === "__NEW__", sku);
+    }
+    function setFormSebagaiArtikelBaru() {
+      document.getElementById('comboInputArtikel').value = "[ARTIKEL BARU] Mengisi Data Baru...";
+      document.getElementById('comboInputArtikel').disabled = true; document.getElementById('btnToggleCombo').disabled = true;
+      document.getElementById('btnTriggerArtikelBaru').classList.add('d-none'); currentSelectedSku = "__NEW__"; tutupCustomDropdown();
+      bukaMatriksUkuranSatuan(true, "__NEW__");
+    }
+    function bukaMatriksUkuranSatuan(isArtikelBaru, targetSku) {
+      var selectKat = document.getElementById('controlKategori').value; var formBaru = document.getElementById('formArtikelBaruContainer');
+      var matrixContainer = document.getElementById('matrixStokContainer'); var matrixBody = document.getElementById('matrixStokBody');
+      formBaru.classList.add('d-none'); matrixContainer.classList.add('d-none'); document.getElementById('btnSaveSatuan').disabled = true;
+      var targetKategoriText = (selectKat === "__NEW__") ? document.getElementById('inputKategoriBaru').value.trim().toUpperCase() : selectKat;
+      var sizesList = [];
+
+      if (isArtikelBaru) {
+        formBaru.classList.remove('d-none'); document.getElementById('inputSkuBaru').value = ""; document.getElementById('inputNamaBaru').value = ""; document.getElementById('inputWarnaBaru').value = ""; document.getElementById('controlAds').value = 0; document.getElementById('controlStatus').value = "Real Stock";
+        if (targetKategoriText === "BAG" || targetKategoriText === "BAGS") sizesList = [{size: "ALL SIZE", qty: 0}];
+        else if (["PANTS", "SWEAT PANTS", "SWEATPANTS"].includes(targetKategoriText)) sizesList = [{size:"28",qty:0},{size:"30",qty:0},{size:"32",qty:0},{size:"34",qty:0}];
+        else sizesList = [{size:"S",qty:0},{size:"M",qty:0},{size:"L",qty:0},{size:"XL",qty:0},{size:"XXL",qty:0}];
+      } else {
+        var matches = globalData.filter(item => item.sku === targetSku);
+        if(matches.length > 0) {
+          document.getElementById('controlAds').value = matches[0].adsGlobal; document.getElementById('controlStatus').value = matches[0].status;
+          matches.forEach(m => sizesList.push({ size: m.size, qty: m.qty }));
+        }
+      }
+      var html = ""; sizesList.forEach(s => {
+        html += `<tr><td class="fw-bold bg-light align-middle fs-6">${s.size}</td><td class="text-secondary align-middle fs-6 font-monospace">${isArtikelBaru ? 0 : s.qty} pcs</td><td><input type="number" class="form-control text-center input-matrix-qty fw-bold text-success" data-size="${s.size}" data-old-qty="${isArtikelBaru ? 0 : s.qty}" value="${isArtikelBaru ? 0 : s.qty}" onclick="this.select()"></td></tr>`;
+      });
+      matrixBody.innerHTML = html; matrixContainer.classList.remove('d-none'); document.getElementById('btnSaveSatuan').disabled = false;
+    }
+    document.addEventListener('click', function(e) { if (e.target.id !== 'comboInputArtikel' && e.target.id !== 'btnToggleCombo' && !e.target.closest('#btnToggleCombo')) tutupCustomDropdown(); });
+    function resetFormMatriksSatuan() { document.getElementById('formArtikelBaruContainer').classList.add('d-none'); document.getElementById('matrixStokContainer').classList.add('d-none'); document.getElementById('btnSaveSatuan').disabled = true; document.getElementById('controlAds').value = ""; }
+    
+    async function eksekusiSimpanSatuan() {
+      var selectKat = document.getElementById('controlKategori').value; var isArtikelBaru = (currentSelectedSku === "__NEW__");
+      var finalKategori = (selectKat === "__NEW__") ? document.getElementById('inputKategoriBaru').value.trim().toUpperCase() : selectKat;
+      var finalSku = isArtikelBaru ? document.getElementById('inputSkuBaru').value.trim() : currentSelectedSku;
+      var finalNama = isArtikelBaru ? document.getElementById('inputNamaBaru').value.trim() : "";
+      var finalWarna = isArtikelBaru ? document.getElementById('inputWarnaBaru').value.trim() : "";
+      var finalStatus = document.getElementById('controlStatus').value; var finalAds = parseFloat(document.getElementById('controlAds').value) || 0;
+
+      if (!finalKategori || !finalSku || (isArtikelBaru && !finalNama)) { Swal.fire('Gagal', 'Parameter wajib diisi!', 'error'); return; }
+      var sizesData = []; document.querySelectorAll('.input-matrix-qty').forEach(inp => {
+        var oldVal = parseInt(inp.getAttribute('data-old-qty')) || 0; var newVal = parseInt(inp.value) || 0;
+        sizesData.push({ size: inp.getAttribute('data-size'), qty: newVal, isChanged: (oldVal !== newVal) });
+      });
+
+      var btn = document.getElementById('btnSaveSatuan'); btn.disabled = true; btn.innerHTML = '⏳ Sedang Menyimpan...';
+      try {
+        const res = await callBackend("saveOrUpdateSingleArticle", { kategori: finalKategori, sku: finalSku, nama: finalNama, warna: finalWarna, status: finalStatus, adsGlobal: finalAds, sizesData: sizesData, isArtikelBaru: isArtikelBaru });
+        Swal.fire('Berhasil!', res, 'success'); document.getElementById('inputKategoriBaru').value = ""; document.getElementById('controlKategori').value = ""; document.getElementById('comboInputArtikel').value = "";
+        btn.innerHTML = '<i class="fa-solid fa-floppy-disk me-2"></i>SIMPAN PERUBAHAN DATA';
+        aksiKategoriSatuanBerubah(); loadDashboardData();
+      } catch (err) { Swal.fire("Gagal", err.message, "error"); btn.disabled = false; btn.innerHTML = 'SIMPAN PERUBAHAN DATA'; }
+    }
+    async function simpanPengaturanBuffer() {
+      var valHero = parseInt(document.getElementById('inputBufferHero').value) || 14; var valVendor = parseInt(document.getElementById('inputBufferVendor').value) || 7;
+      var btn = document.getElementById('btnSaveBuffer'); btn.disabled = true; btn.innerHTML = '⏳ Menyimpan...';
+      try {
+        const res = await callBackend("saveBufferSettings", { heroBuffer: valHero, vendorBuffer: valVendor });
+        Swal.fire('Berhasil', res, 'success'); btn.disabled = false; btn.innerHTML = 'SIMPAN PENGATURAN BUFFER'; loadDashboardData();
+      } catch(err) { Swal.fire("Gagal", err.message, "error"); btn.disabled = false; }
+    }
+    function prosesUploadExcel() {
+      var fileInput = document.getElementById('fileExcel'); if(fileInput.files.length === 0) { Swal.fire('Peringatan', 'Pilih file!', 'warning'); return; }
+      var reader = new FileReader(); reader.onload = async function(e) {
+        var workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+        var cleanRows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1}).filter(r => r.length > 0 && r[0] != null); cleanRows.shift();
+        document.getElementById('btnUpload').disabled = true; document.getElementById('btnUpload').innerText = "⏳ Memproses...";
+        try {
+          await callBackend("importBulkData", { dataArray: cleanRows });
+          Swal.fire('Berhasil!', 'Bulk Impor Berhasil!', 'success'); document.getElementById('fileExcel').value = ""; loadDashboardData();
+        } catch(err) { Swal.fire("Gagal", err.message, "error"); } finally { document.getElementById('btnUpload').disabled = false; document.getElementById('btnUpload').innerText = "MULAI BULK IMPORT EXCEL"; }
+      };
+      reader.readAsArrayBuffer(fileInput.files[0]);
+    }
+
+    // =================================================================
+    // MODUL CODE LOGIC: VIEW MANAJEMEN VENDOR
+    // =================================================================
+    var isEditModeVendor = false;
+    function inisialisasiCheckboxAksesVendor() {
+      var checkContainer = document.getElementById('vendorKategoriCheckboxes'); if(!checkContainer) return; checkContainer.innerHTML = "";
+      listKategoriGlobal.forEach(cat => {
+        checkContainer.insertAdjacentHTML('beforeend', `<div class="form-check mb-1 text-start"><input class="form-check-input chk-vendor-akses" type="checkbox" value="${cat}" id="chk_vendor_${cat}"><label class="form-check-label fw-bold text-dark" for="chk_vendor_${cat}">${cat}</label></div>`);
+      });
+    }
+    async function renderVendorManageTable() {
+      var tbody = document.getElementById('tableVendorBody'); if(!tbody) return;
+      try {
+        const vendors = await callBackend("readVendorData");
+        if(!vendors || vendors.length === 0) { tbody.innerHTML = `<tr><td colspan="4" class="text-muted py-4">Belum ada vendor terdaftar.</td></tr>`; return; }
+        var html = "";
+        vendors.forEach(v => {
+          var currentHostUrl = window.location.href.split('?')[0];
+          var linkPublikVendor = `${currentHostUrl.replace('index.html', '')}vendor.html?user=${v.username}`;
+          var badgeAksesHtml = ""; v.akses.forEach(a => { if(a.trim() !== "") badgeAksesHtml += `<span class="badge bg-secondary me-1 text-uppercase">${a}</span>`; });
+          html += `<tr><td class="text-start fw-bold fs-6">${v.nama}</td><td class="text-start"><strong class="text-primary font-monospace">${v.username}</strong></td><td class="text-start">${badgeAksesHtml}</td><td class="align-middle"><button class="btn btn-sm btn-outline-primary fw-bold mb-1 w-100" onclick="siapkanEditVendor('${v.username}', '${v.nama}', '${v.akses.join(',')}')">Edit Akses</button><button class="btn btn-sm btn-dark fw-bold mb-1 w-100" onclick="salinTautanVendor('${linkPublikVendor}')">Salin Tautan</button><button class="btn btn-sm btn-outline-danger w-100" onclick="hapusVendor('${v.username}')">Hapus</button></td></tr>`;
+        });
+        tbody.innerHTML = html;
+      } catch(err) { tbody.innerHTML = `<tr><td colspan="4" class="text-danger py-4">Gagal memuat vendor: ${err.message}</td></tr>`; }
+    }
+    function siapkanEditVendor(username, nama, aksesStr) {
+      isEditModeVendor = true; document.getElementById('vNama').value = nama; document.getElementById('vUser').value = username; document.getElementById('vUser').disabled = true;
+      var arrAkses = aksesStr.split(','); document.querySelectorAll('.chk-vendor-akses').forEach(chk => chk.checked = arrAkses.includes(chk.value));
+      document.getElementById('titleFormVendor').innerHTML = '<i class="fa-solid fa-pen-to-square text-warning me-2"></i>Edit Akses Vendor';
+      var btnSave = document.getElementById('btnSaveVendor'); btnSave.innerHTML = 'UPDATE AKUN VENDOR'; btnSave.classList.replace('btn-primary', 'btn-warning');
+      document.getElementById('btnCancelEditVendor').classList.remove('d-none'); window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    function batalkanEditVendor() {
+      isEditModeVendor = false; document.getElementById('vNama').value = ""; document.getElementById('vUser').value = ""; document.getElementById('vUser').disabled = false;
+      document.querySelectorAll('.chk-vendor-akses').forEach(chk => chk.checked = false);
+      document.getElementById('titleFormVendor').innerHTML = '<i class="fa-solid fa-user-plus text-primary me-2"></i>Daftarkan Vendor Baru';
+      var btnSave = document.getElementById('btnSaveVendor'); btnSave.innerHTML = 'SIMPAN AKUN VENDOR'; btnSave.classList.replace('btn-warning', 'btn-primary');
+      document.getElementById('btnCancelEditVendor').classList.add('d-none');
+    }
+    async function eksekusiTambahVendor() {
+      var nama = document.getElementById('vNama').value; var user = document.getElementById('vUser').value.toLowerCase().replace(/\s+/g, '');
+      var listAkses = []; document.querySelectorAll('.chk-vendor-akses:checked').forEach(chk => listAkses.push(chk.value));
+      if(!nama || !user || listAkses.length === 0) { Swal.fire('Gagal', 'Semua parameter form wajib dilengkapi!', 'error'); return; }
+      
+      var btn = document.getElementById('btnSaveVendor'); btn.disabled = true;
+      try {
+        var action = isEditModeVendor ? "updateVendorAccess" : "saveNewVendor";
+        const response = await callBackend(action, { nama: nama, username: user, listKategori: listAkses });
+        Swal.fire('Berhasil!', response, 'success'); batalkanEditVendor(); renderVendorManageTable(); inisialisasiDropdownMonitorVendor();
+      } catch (err) { Swal.fire('Gagal', err.message, 'error'); } finally { btn.disabled = false; }
+    }
+    function salinTautanVendor(link) {
+      var textArea = document.createElement("textarea"); textArea.value = link; document.body.appendChild(textArea); textArea.select();
+      document.execCommand('copy'); document.body.removeChild(textArea);
+      Swal.fire({ icon: 'success', title: 'Tautan Vendor Disalin!', timer: 2000, showConfirmButton: false });
+    }
+    function hapusVendor(username) {
+      Swal.fire({ title: 'Hapus Vendor?', text: "Akun vendor akan dihapus permanen!", icon: 'warning', showCancelButton: true }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            const res = await callBackend("deleteVendorAccount", { username: username });
+            Swal.fire('Terhapus!', res, 'success'); renderVendorManageTable(); inisialisasiDropdownMonitorVendor();
+          } catch(err) { Swal.fire("Gagal", err.message, "error"); }
+        }
+      });
+    }
+
+    // =================================================================
+    // MODUL CODE LOGIC: VIEW MONITOR VENDOR
+    // =================================================================
+    var monitorActiveAksesKategori = []; var globalKotretanDbMap = {}; var activeVendorUser = ""; var activeVendorName = "";
+    async function inisialisasiDropdownMonitorVendor() {
+      var selectVendor = document.getElementById('monVendor'); if(!selectVendor) return;
+      try {
+        globalKotretanDbMap = await callBackend("loadSavedKotretanDb") || {};
+        const vendors = await callBackend("readVendorData");
+        selectVendor.innerHTML = '<option value="">-- Pilih Vendor --</option>';
+        vendors.sort((a,b) => a.nama.localeCompare(b.nama)).forEach(v => {
+          selectVendor.insertAdjacentHTML('beforeend', `<option value="${v.username}" data-nama="${v.nama.toUpperCase()}" data-akses="${v.akses.join(',')}">${v.nama.toUpperCase()}</option>`);
+        });
+      } catch(e) { console.error("Dropdown monitor vendor bermasalah."); }
+    }
+    function aksiMonVendorBerubah() {
+      var selectVendor = document.getElementById('monVendor'); var selectKat = document.getElementById('monKategori');
+      var selectStatus = document.getElementById('monStatus'); var selectArt = document.getElementById('monArtikel');
+      var btnTambah = document.getElementById('btnTambahMon');
+      
+      selectKat.innerHTML = '<option value="">-- Pilih Kategori --</option>'; selectKat.disabled = true; selectStatus.disabled = true; selectStatus.value = "Semua";
+      selectArt.innerHTML = '<option value="">-- Pilih Artikel --</option>'; selectArt.disabled = true; btnTambah.disabled = true;
+      activeVendorUser = selectVendor.value; clearSearchTableInternal();
+
+      if (activeVendorUser === "") {
+        document.getElementById('labelActiveVendor').innerHTML = '<i class="fa-solid fa-info-circle me-1"></i>Workspace non-aktif.';
+        document.getElementById('viewFilterStatus').disabled = true; document.getElementById('searchTableText').disabled = true;
+        document.getElementById('btnResetKotretan').disabled = true; document.getElementById('btnSaveCloud').disabled = true;
+        document.getElementById('btnExportEx').disabled = true; document.getElementById('btnExportPdf').disabled = true;
+        document.getElementById('tbodyKotretan').innerHTML = `<tr><td colspan="11" class="text-muted py-5">Silakan pilih vendor untuk membuka area kotretan.</td></tr>`; return;
+      }
+      
+      var selectedOpt = selectVendor.options[selectVendor.selectedIndex];
+      activeVendorName = selectedOpt.getAttribute('data-nama');
+      document.getElementById('labelActiveVendor').innerHTML = `Workspace Aktif: <strong class="text-dark">${activeVendorName}</strong>`;
+      document.getElementById('viewFilterStatus').disabled = false; document.getElementById('searchTableText').disabled = false;
+      document.getElementById('btnResetKotretan').disabled = false; document.getElementById('btnSaveCloud').disabled = false;
+      document.getElementById('btnExportEx').disabled = false; document.getElementById('btnExportPdf').disabled = false;
+
+      if (!globalKotretanDbMap[activeVendorUser]) globalKotretanDbMap[activeVendorUser] = [];
+      var aksesStr = selectedOpt.getAttribute('data-akses');
+      if (aksesStr && aksesStr.trim() !== "") {
+        monitorActiveAksesKategori = aksesStr.split(',').sort(); selectKat.disabled = false;
+        monitorActiveAksesKategori.forEach(cat => selectKat.insertAdjacentHTML('beforeend', `<option value="${cat}">${cat}</option>`));
+      }
+      renderTabelKotretan();
+    }
+    function aksiMonKategoriAtauStatusBerubah() {
+      var selectKat = document.getElementById('monKategori').value; var selectStatus = document.getElementById('monStatus').value;
+      var selectArt = document.getElementById('monArtikel'); var btn = document.getElementById('btnTambahMon');
+      selectArt.innerHTML = '<option value="">-- Pilih Artikel --</option>';
+      if (selectKat === "") { document.getElementById('monStatus').disabled = true; selectArt.disabled = true; btn.disabled = true; return; }
+      document.getElementById('monStatus').disabled = false;
+
+      var uniqueArticles = {}; globalData.forEach(item => {
+        if (item.isAktif === "Aktif" && item.kategori === selectKat && (selectStatus === "Semua" || item.status === selectStatus)) {
+          uniqueArticles[item.sku] = `${item.nama} [${item.sku}]`;
+        }
+      });
+      var keys = Object.keys(uniqueArticles).sort();
+      if (keys.length > 0) {
+        keys.forEach(sku => selectArt.insertAdjacentHTML('beforeend', `<option value="${sku}">${uniqueArticles[sku]}</option>`));
+        selectArt.disabled = false; btn.disabled = false;
+      } else { selectArt.innerHTML = '<option value="">(Tidak ada artikel cocok)</option>'; selectArt.disabled = true; btn.disabled = true; }
+    }
+    function tambahkanKeKotretanLokal() {
+      var skuTarget = document.getElementById('monArtikel').value; if(!skuTarget) return;
+      if ((globalKotretanDbMap[activeVendorUser] || []).includes(skuTarget)) { Swal.fire('Peringatan', 'Artikel sudah ada di daftar.', 'warning'); return; }
+      globalKotretanDbMap[activeVendorUser].push(skuTarget); renderTabelKotretan();
+    }
+    function hapusDariKotretan(sku) { globalKotretanDbMap[activeVendorUser] = (globalKotretanDbMap[activeVendorUser] || []).filter(s => s !== sku); renderTabelKotretan(); }
+    function kosongkanKotretanLokal() { globalKotretanDbMap[activeVendorUser] = []; clearSearchTableInternal(); renderTabelKotretan(); }
+    
+    function simpanBatchKotretanKeCloud() {
+      var targetSkus = globalKotretanDbMap[activeVendorUser] || [];
+      Swal.fire({ title: 'Simpan ke Cloud?', text: `Menyimpan ${targetSkus.length} data untuk vendor ${activeVendorName}.`, icon: 'question', showCancelButton: true }).then(async (result) => {
+        if (result.isConfirmed) {
+          Swal.fire({ title: 'Menyinkronkan Cloud Database...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+          try {
+            await callBackend("clearVendorKotretanDb", { vendorUser: activeVendorUser });
+            if (targetSkus.length === 0) { Swal.fire('Berhasil', 'Workspace berhasil dikosongkan di cloud!', 'success'); renderTabelKotretan(); return; }
+            
+            for(let sku of targetSkus) {
+              await callBackend("saveArticleToKotretanDb", { vendorUser: activeVendorUser, sku: sku });
+            }
+            Swal.fire('Sukses Tersimpan!', `Berhasil mengamankan target ${targetSkus.length} artikel ke Google Sheets!`, 'success');
+            renderTabelKotretan();
+          } catch(err) { Swal.fire("Gagal Komunikasi", err.message, "error"); }
+        }
+      });
+    }
+    function buildFilteredObjectsList() {
+      var savedSkus = globalKotretanDbMap[activeVendorUser] || []; var objectsList = [];
+      savedSkus.forEach(sku => {
+        var targetItems = globalData.filter(i => i.sku === sku); if(targetItems.length === 0) return;
+        var rowObj = { kategori: targetItems[0].kategori, nama: targetItems[0].nama, sku: targetItems[0].sku, status: targetItems[0].status, warna: targetItems[0].warna, s_28: 0, m_30: 0, l_32: 0, xl_34: 0, xxl: 0, allsize: 0, isBag: false, total: 0 };
+        targetItems.forEach(item => {
+          var sz = item.size.toUpperCase().trim(); var qty = parseInt(item.qty) || 0; rowObj.total += qty;
+          if (sz === "S" || sz === "28") rowObj.s_28 = qty;
+          else if (sz === "M" || sz === "30") rowObj.m_30 = qty;
+          else if (sz === "L" || sz === "32") rowObj.l_32 = qty;
+          else if (sz === "XL" || sz === "34") rowObj.xl_34 = qty;
+          else if (sz === "XXL") rowObj.xxl = qty;
+          else { rowObj.allsize = qty; rowObj.isBag = true; }
+        });
+        objectsList.push(rowObj);
+      });
+      return objectsList;
+    }
+    function renderTabelKotretan() {
+      var tbody = document.getElementById('tbodyKotretan'); if(!tbody) return;
+      var currentData = buildFilteredObjectsList(); var viewFilter = document.getElementById('viewFilterStatus').value;
+      var searchKeyword = document.getElementById('searchTableText') ? document.getElementById('searchTableText').value.toLowerCase().trim() : "";
+      
+      var filteredData = currentData.filter(r => (viewFilter === "Semua" || r.status === viewFilter) && (searchKeyword === "" || r.sku.toLowerCase().includes(searchKeyword) || r.nama.toLowerCase().includes(searchKeyword)));
+      if (currentData.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="text-muted py-5">Kotretan kosong. Gunakan panel di atas untuk menambah artikel.</td></tr>`; return; }
+      if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="text-muted py-4">Tidak ada data cocok dengan filter.</td></tr>`; return; }
+      
+      var html = ""; filteredData.forEach(r => {
+        html += `<tr>
+          <td class="text-start fw-bold text-uppercase small">${r.kategori}</td>
+          <td class="text-start fw-bold text-dark text-wrap">${r.nama}</td>
+          <td class="font-monospace text-start text-primary small">${r.sku}</td>
+          <td><span class="badge ${r.status.toLowerCase().includes('fake')?'bg-warning-subtle text-warning-emphasis':'bg-success-subtle text-success-emphasis'} border d-block mb-1">${r.status}</span><span class="badge bg-light text-dark border">${r.warna}</span></td>
+          ${r.isBag ? `<td colspan="5" class="bg-light font-monospace fw-bold text-primary">ALL SIZE [ ${r.allsize} pcs ]</td>` : `<td class="font-monospace">${r.s_28}</td><td class="font-monospace">${r.m_30}</td><td class="font-monospace">${r.l_32}</td><td class="font-monospace">${r.xl_34}</td><td class="font-monospace">${r.xxl}</td>`}
+          <td class="fw-bold text-dark bg-light">${r.total}</td>
+          <td class="exclude-export"><button class="btn btn-sm btn-outline-danger" onclick="hapusDariKotretan('${r.sku}')"><i class="fa-solid fa-times"></i></button></td>
+        </tr>`;
+      });
+      tbody.innerHTML = html;
+    }
+    function filterTabelInternal() {
+      var input = document.getElementById('searchTableText'); var btn = document.getElementById('btnClearSearchTable');
+      if (btn) { if (input && input.value.trim() !== "") btn.style.setProperty('display', 'block', 'important'); else btn.style.setProperty('display', 'none', 'important'); }
+      renderTabelKotretan();
+    }
+    function clearSearchTableInternal() { var input = document.getElementById('searchTableText'); if (input) input.value = ""; var btn = document.getElementById('btnClearSearchTable'); if (btn) btn.style.setProperty('display', 'none', 'important'); renderTabelKotretan(); }
+    
+    function exportMonitorToExcel() {
+      var filteredData = buildFilteredObjectsList();
+      var wsData = [["LAPORAN TARGET ALOKASI PRODUKSI"],["NAMA VENDOR:", activeVendorName],[],["KATEGORI", "NAMA ARTIKEL", "SKU", "TIPE STOK", "WARNA", "S / 28", "M / 30", "L / 32", "XL / 34", "XXL", "TOTAL QTY"]];
+      filteredData.forEach(r => wsData.push([r.kategori, r.nama, r.sku, r.status, r.warna, r.isBag?r.allsize:r.s_28, r.isBag?"":r.m_30, r.isBag?"":r.l_32, r.isBag?"":r.xl_34, r.isBag?"":r.xxl, r.total]));
+      var wb = XLSX.utils.book_new(); var ws = XLSX.utils.aoa_to_sheet(wsData); XLSX.utils.book_append_sheet(wb, ws, "TARGET"); XLSX.writeFile(wb, `Target_${activeVendorName}.xlsx`);
+    }
+    function exportMonitorToPDF() {
+      var filteredData = buildFilteredObjectsList(); const { jsPDF } = window.jspdf; const doc = new jsPDF('landscape');
+      doc.text(`Laporan Target Stok: ${activeVendorName}`, 14, 20);
+      var bodyData = filteredData.map(r => [r.kategori, r.nama, r.sku, r.status, r.isBag?`ALL SIZE (${r.allsize})`:r.s_28.toString(), r.isBag?"":r.m_30.toString(), r.isBag?"":r.l_32.toString(), r.isBag?"":r.xl_34.toString(), r.isBag?"":r.xxl.toString(), r.total.toString()]);
+      doc.autoTable({ startY: 30, head: [['Kategori', 'Nama Artikel', 'SKU', 'Tipe', 'S/28', 'M/30', 'L/32', 'XL/34', 'XXL', 'Total']], body: bodyData });
+      doc.save(`Target_${activeVendorName}.pdf`);
+    }
+
+    // INTER-TAB NAVIGATION HELPER
+    function lompatKeUpdateManual(kategori, sku, size) {
+      if (typeof APP_ROLE_MODE !== "undefined" && APP_ROLE_MODE === "vendor") return;
+      var tabManage = document.getElementById('manage-tab');
+      if (tabManage) {
+        tabManage.click(); var selectKat = document.getElementById('controlKategori');
+        if (selectKat) {
+          selectKat.value = kategori; aksiKategoriSatuanBerubah();
+          setTimeout(function() {
+            var matches = localArticlesList.filter(item => item.sku === sku);
+            if (matches.length > 0) {
+              pilihArtikelDariCombo(matches[0].sku);
+              setTimeout(function() {
+                document.querySelectorAll('.input-matrix-qty').forEach(inp => {
+                  if (inp.getAttribute('data-size') === size) { inp.style.backgroundColor = '#fff3cd'; inp.focus(); inp.select(); }
+                });
+              }, 300);
+            }
+          }, 300);
+        }
+      }
+    }
+  </script>
+</body>
+</html>

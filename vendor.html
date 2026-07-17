@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCRMS Vendor Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/5465/5465858.png">
+  <link rel="manifest" href="./manifest.json">
+  
+  <style>
+    .nav-tabs { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; border-bottom: 2px solid #dee2e6; }
+    .nav-tabs .nav-link { white-space: nowrap; border: none; color: #6c757d; font-weight: 600; padding: 12px 20px; font-size: 1rem; }
+    .nav-tabs .nav-link.active { color: #000; border-bottom: 3px solid #000; background: none; }
+    .nav-tabs .nav-link:hover { color: #333; }
+    .article-card { background: #fff; border-radius: 12px; border: none; box-shadow: 0 3px 10px rgba(0,0,0,0.04); margin-bottom: 16px; padding: 16px; border-left: 5px solid transparent; }
+    .sku-text { font-size: 0.85rem; color: #8c8c8c; font-weight: 500; }
+    .article-title { font-size: 1.1rem; font-weight: 700; color: #2d3748; margin-bottom: 4px; }
+    .badge-fake { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+    .badge-real { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .size-container { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
+    .size-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 4px; text-align: center; }
+    .size-name { font-size: 0.75rem; color: #718096; font-weight: bold; text-transform: uppercase; }
+    .size-qty { font-size: 0.95rem; font-weight: 700; color: #1a202c; }
+    .box-kurang { background-color: #fff5f5 !important; border-color: #feb2b2 !important; }
+    .box-kurang .size-qty { color: #e53e3e !important; }
+    .card-kurang { border-left-color: #e53e3e !important; }
+    .trend-up { color: #38a169; } .trend-down { color: #e53e3e; }
+    .sticky-tabs { position: sticky; top: 0; background-color: #f4f6f9; z-index: 1020; padding-top: 10px; }
+  </style>
+</head>
+<body class="bg-light">
+
+  <nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid px-4">
+      <span class="navbar-brand fw-bold fs-5"><i class="fa-solid fa-boxes-stacked me-2"></i> SCRMS Vendor Portal</span>
+      <button class="btn btn-outline-light" onclick="loadDashboardData()"><i class="fa-solid fa-sync"></i> Refresh</button>
+    </div>
+  </nav>
+
+  <div class="container-fluid px-4 mt-4">
+    <div id="vendorWelcomeHeader" class="mb-3 p-3 bg-white border-start border-primary border-4 rounded shadow-sm shadow-sm">
+      <div class="d-flex align-items-center">
+        <i class="fa-solid fa-handshake text-primary fa-2x me-3"></i>
+        <div>
+          <h6 class="mb-0 fw-bold text-muted">Selamat Datang di Portal Supply Chain</h6>
+          <h4 class="mb-0 fw-bold text-dark" id="txtNamaVendorWelcome">-</h4>
+        </div>
+      </div>
+    </div>
+
+    <div id="dashPage">
+      <div class="card p-3 mb-3 bg-white border-0 shadow-sm" style="border-radius:12px;">
+        <div class="row align-items-center g-2">
+          <div class="col-12">
+            <div class="input-group mb-2">
+              <span class="input-group-text bg-white border-end-0" style="border-color: #dee2e6;"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+              <input type="text" id="searchArt" class="form-control border-start-0 border-end-0 ps-0" placeholder="Cari SKU atau nama artikel..." onkeyup="filterDisplay()">
+              <button class="btn bg-white border border-start-0 text-muted" type="button" id="btnClearSearchArt" onclick="clearSearchArt()" style="display: none; border-color: #dee2e6; z-index: 4;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="d-flex flex-wrap justify-content-between align-items-center mt-2 gap-2">
+              <div class="d-flex align-items-center gap-3 flex-wrap">
+                <div class="form-check form-switch pt-1">
+                  <input class="form-check-input" type="checkbox" id="filterPrioOnly" onchange="filterDisplay()" style="transform: scale(1.2); margin-top: 0.2rem;">
+                  <label class="form-check-label fw-bold ms-2 text-dark" for="filterPrioOnly"><i class="fa-solid fa-star text-warning me-1"></i>Hanya Prioritas</label>
+                </div>
+                <select id="filterTipeStok" class="form-select form-select-sm fw-bold border-secondary w-auto" onchange="filterDisplay()">
+                  <option value="Semua">Semua Tipe Stok</option>
+                  <option value="Real Stock">Real Stock</option>
+                  <option value="Fake Stock">Fake Stock</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="sticky-tabs">
+        <ul class="nav nav-tabs mb-3 border-0" id="categoryTabs" role="tablist" style="font-size: 0.9rem;"></ul>
+      </div>
+      <div id="articlesContainer"></div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+    var API_URL = "https://script.google.com/macros/s/AKfycbySvZbT9jJ3ISeGh4bb7TdLE4W8aFR1Rbw199JOK0H6D_HWAG40lG-oIAuFKGuG1EtR0w/exec";
+    var globalData = [];
+    var listKategoriGlobal = []; 
+    var activeCategory = ""; 
+    var GLOBAL_VENDOR_BUFFER = 7;
+
+    // VALIDASI INTEGRITAS: WAJIB MEMILIKI USER PARAMETER
+    var urlParams = new URLSearchParams(window.location.search);
+    var TARGET_VENDOR_USER = urlParams.get('user') || localStorage.getItem('scrms_last_vendor') || "";
+
+    // Simpan ke local storage agar saat aplikasi dibuka dari ikon PWA, ia tidak kehilangan data Vendor-nya!
+    if(urlParams.get('user')) {
+      localStorage.setItem('scrms_last_vendor', urlParams.get('user'));
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      if (TARGET_VENDOR_USER === "") {
+        document.getElementById('dashPage').innerHTML = '<div class="alert alert-danger text-center mt-5"><i class="fa-solid fa-lock fa-3x mb-3 d-block"></i><h4 class="fw-bold">Akses Ditolak</h4>Tautan tidak valid. Harap gunakan link resmi yang dibagikan dari Admin kantor SCREAMOUS.</div>';
+        document.getElementById('vendorWelcomeHeader').remove();
+        return;
+      }
+      loadDashboardData(); 
+    });
+
+    async function callBackend(actionName, payloadData = {}) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          mode: "cors",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify({ action: actionName, payload: payloadData }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        const result = await response.json();
+        if (result.status === "success") return result.data;
+        throw new Error(result.message);
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === "AbortError") throw new Error("Jaringan sedang tidak stabil, silakan refresh halaman untuk memuat ulang data.");
+        throw error;
+      }
+    }
+
+    async function loadDashboardData() {
+      var artContainer = document.getElementById('articlesContainer');
+      if(artContainer) artContainer.innerHTML = '<div class="text-center py-5 text-muted"><i class="fa-solid fa-spinner fa-spin fa-3x mb-3"></i>Menyusun data katalog...</div>';
+      try {
+        const response = await callBackend("readData");
+        globalData = response.articles || [];
+        GLOBAL_VENDOR_BUFFER = (response.settings && response.settings.vendor) ? response.settings.vendor : 7;
+        
+        const vendorList = await callBackend("readVendorData");
+        var match = vendorList.find(v => v.username === TARGET_VENDOR_USER);
+        if(match) {
+          document.getElementById('txtNamaVendorWelcome').innerText = match.nama.toUpperCase();
+          listKategoriGlobal = match.akses.map(k => k.trim()).sort();
+          globalData = globalData.filter(item => listKategoriGlobal.includes(item.kategori));
+          buildCategoryTabs(listKategoriGlobal);
+        } else {
+          if(artContainer) artContainer.innerHTML = '<div class="alert alert-danger">Tautan Vendor Tidak Valid atau Akun Telah Dinonaktifkan.</div>';
+        }
+      } catch (err) {
+        Swal.fire("Koneksi Tersendat", err.message, "error");
+        if(artContainer) artContainer.innerHTML = `<div class="alert alert-danger">Gagal Sinkronisasi: ${err.message}</div>`;
+      }
+    }
+
+    function buildCategoryTabs(categories) {
+      var tabHtml = "";
+      if(categories.length > 0) {
+        if(!activeCategory || !categories.includes(activeCategory)) activeCategory = categories[0];
+        categories.forEach(function(cat) {
+          tabHtml += `<li class="nav-item"><button class="nav-link ${cat === activeCategory ? 'active fw-bold' : ''}" onclick="switchCategory('${cat}')" type="button" style="border:none; border-radius:8px; margin-right:5px;">${cat}</button></li>`;
+        });
+      }
+      var tabsEl = document.getElementById('categoryTabs'); if(tabsEl) tabsEl.innerHTML = tabHtml;
+      renderCards();
+    }
+    function switchCategory(cat) { activeCategory = cat; buildCategoryTabs(listKategoriGlobal); }
+
+    // RENDER UTAMA KARTU VENDOR - BENAR-BENAR BERSIH TANPA FITUR LOG / EDIT
+    function renderCards() {
+      var container = document.getElementById('articlesContainer'); if(!container) return;
+      var keyword = document.getElementById('searchArt') ? document.getElementById('searchArt').value.toLowerCase().trim() : "";
+      var vendorBufferDays = GLOBAL_VENDOR_BUFFER;
+      var filterPrioChecked = document.getElementById('filterPrioOnly') ? document.getElementById('filterPrioOnly').checked : false;
+      var filterTipeStok = document.getElementById('filterTipeStok') ? document.getElementById('filterTipeStok').value : "Semua";
+      var grouped = {};
+      
+      globalData.forEach(function(item) {
+        if(item.kategori !== activeCategory || item.isAktif !== "Aktif") return;
+        if(keyword !== "" && !item.sku.toLowerCase().includes(keyword) && !item.nama.toLowerCase().includes(keyword)) return;
+        if(!grouped[item.sku]) {
+          grouped[item.sku] = { sku: item.sku, nama: item.nama, kategori: item.kategori, warna: item.warna, status: item.status, adsGlobal: item.adsGlobal, timestamp: item.timestamp, isPriority: item.isPriority, sizes: [] };
+        }
+        grouped[item.sku].sizes.push({ size: item.size, qty: item.qty, tren: item.tren });
+      });
+
+      var html = "";
+      Object.keys(grouped).forEach(function(key) {
+        var art = grouped[key]; if (filterPrioChecked && !art.isPriority) return; if (filterTipeStok !== "Semua" && art.status !== filterTipeStok) return;
+        var badgeClass = art.status.toLowerCase().includes('fake') ? 'badge-fake' : 'badge-real';
+        var adaSizeKritis = false; var sizeBoxesHtml = ""; var limitBatasKritis = Math.ceil(art.adsGlobal * vendorBufferDays);
+        var totalStokArtikel = 0; art.sizes.forEach(s => totalStokArtikel += parseInt(s.qty) || 0);
+        
+        var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
+        art.sizes.sort((a, b) => (urutanBaku.indexOf(a.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(a.size.toUpperCase())) - (urutanBaku.indexOf(b.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(b.size.toUpperCase())));
+        
+        art.sizes.forEach(function(sz) {
+          var isSizeKritis = sz.qty <= limitBatasKritis; if(isSizeKritis) adaSizeKritis = true;
+          var trendIcon = sz.tren === '▲' ? '<i class="fa-solid fa-arrow-trend-up trend-up ms-1"></i>' : (sz.tren === '▼' ? '<i class="fa-solid fa-arrow-trend-down trend-down ms-1"></i>' : '');
+          sizeBoxesHtml += `<div class="size-box ${isSizeKritis ? 'box-kurang' : ''}"><div class="size-name">${sz.size}</div><div class="size-qty">${sz.qty}${trendIcon}</div></div>`;
+        });
+
+        html += `<div class="article-card ${adaSizeKritis ? 'card-kurang' : ''} ${art.isPriority ? 'border border-warning border-3 bg-light' : ''}">
+          <div class="d-flex justify-content-between align-items-start">
+            <div><span class="sku-text">${art.sku}</span><div class="article-title">${art.nama}</div><span class="text-muted small"><i class="fa-solid fa-palette me-1"></i> WRNA: ${art.warna}</span></div>
+            <div class="text-end">${art.isPriority ? '<span class="badge bg-warning text-dark mb-1 me-2"><i class="fa-solid fa-star me-1"></i>PRIORITAS</span>' : ''}<span class="badge ${badgeClass} mb-1">${art.status}</span><div class="text-muted text-xs mt-1">TOTAL STOK: <strong class="text-primary">${totalStokArtikel}</strong></div></div>
+          </div>
+          <div class="size-container mt-3">${sizeBoxesHtml}</div>
+          <div class="d-flex justify-content-end align-items-center mt-3 pt-2 border-top border-light"><div class="text-muted text-xs"><i class="fa-regular fa-clock me-1"></i>Update: ${art.timestamp}</div></div>
+        </div>`;
+      });
+      container.innerHTML = html === "" ? "<div class='text-center py-5 text-muted'><i class='fa-solid fa-box-open fa-2x mb-2'></i><br>Tidak ada artikel cocok dengan filter.</div>" : html;
+    }
+
+    function filterDisplay() {
+      var input = document.getElementById('searchArt'); var btn = document.getElementById('btnClearSearchArt');
+      if (btn) { if (input && input.value.trim() !== "") btn.style.setProperty('display', 'block', 'important'); else btn.style.setProperty('display', 'none', 'important'); }
+      renderCards();
+    }
+    function clearSearchArt() {
+      var input = document.getElementById('searchArt'); if (input) { input.value = ""; input.focus(); }
+      var btn = document.getElementById('btnClearSearchArt'); if (btn) btn.style.setProperty('display', 'none', 'important');
+      renderCards();
+    }
+  </script>
+</body>
+</html>

@@ -1,2 +1,2 @@
-# SCRMS-Stock-Dev
-Screamous Backup Inventory System
+# SCRMS-Stock
+Aplikasi manajemen stok real-time untuk Screamous
