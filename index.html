@@ -490,7 +490,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             let sizes = inventory.filter(inv => inv.article_sku === art.sku);
             if(sizes.length === 0) {
                 formattedData.push({
-                    sku: art.sku, nama: art.nama, kategori: art.kategori, warna: art.warna, 
+                    sku: art.sku, nama: art.name, kategori: art.category_id, warna: art.color, 
                     status: art.status_tipe, adsGlobal: art.ads_global, isAktif: art.is_aktif ? "Aktif" : "Non-Aktif", 
                     isPriority: art.is_priority, timestamp: new Date(art.updated_at).toLocaleString('id-ID'),
                     size: "-", qty: 0, tren: "-"
@@ -498,11 +498,11 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             } else {
                 sizes.forEach(sz => {
                   formattedData.push({
-                    sku: art.sku, nama: art.nama, kategori: art.kategori, warna: art.warna, 
+                    sku: art.sku, nama: art.name, kategori: art.category_id, warna: art.color, 
                     status: art.status_tipe, adsGlobal: art.ads_global, isAktif: art.is_aktif ? "Aktif" : "Non-Aktif", 
                     isPriority: art.is_priority, timestamp: new Date(sz.updated_at || art.updated_at).toLocaleString('id-ID'),
                     size: sz.ukuran, qty: sz.qty, tren: sz.tren || "-"
-                  });
+                });
                 });
             }
           });
@@ -515,12 +515,12 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
         else if (actionName === "saveOrUpdateSingleArticle") {
           const { kategori, sku, nama, warna, status, adsGlobal, sizesData, isArtikelBaru } = payloadData;
           
-          // A. Upsert ke tabel 'articles'
+         // A. Upsert ke tabel 'articles'
           const { error: artErr } = await supabaseClient.from('articles').upsert({
             sku: sku,
-            nama: isArtikelBaru ? nama : undefined, // hanya set nama jika artikel baru
-            kategori: kategori,
-            warna: isArtikelBaru ? warna : undefined,
+            name: isArtikelBaru ? nama : undefined, // disesuaikan ke kolom 'name'
+            category_id: kategori,                  // disesuaikan ke kolom 'category_id'
+            color: isArtikelBaru ? warna : undefined, // disesuaikan ke kolom 'color'
             status_tipe: status,
             ads_global: adsGlobal,
             updated_at: new Date()
