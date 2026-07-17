@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <meta charset="UTF-8">
   <base target="_top">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -446,6 +447,14 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
   <script>
+   // Konfigurasi Supabase
+   const SUPABASE_URL = "https://iiuwynlxqfupxklauied.supabase.co";
+   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpdXd5bmx4cWZ1cHhrbGF1aWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyOTY1MTYsImV4cCI6MjA5OTg3MjUxNn0.k_ViDcTyv-0vqEYtPm8Gh2EeIY3U9_7q_i-qduToRiw";
+
+   // Membuat client Supabase
+   const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    
     // =================================================================
     // CONFIG BACKEND API & DRIVER KOMUNIKASI FETCH DENGAN TIMEOUT LOKAL
     // =================================================================
@@ -453,33 +462,75 @@
     // TEMPELKAN API BACKEND GOOGLE WEBAPP ANDA DISINI
     var API_URL = "https://script.google.com/macros/s/AKfycbySvZbT9jJ3ISeGh4bb7TdLE4W8aFR1Rbw199JOK0H6D_HWAG40lG-oIAuFKGuG1EtR0w/exec";
     
-    // MESIN UTAMA FETCH DENGAN ABORTCONTROLLER (8 DETIK TIMEOUT)
+    // MESIN UTAMA FETCH SUPABASE
     async function callBackend(actionName, payloadData = {}) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // Batas aman 8 detik
-
       try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          mode: "cors",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: actionName, payload: payloadData }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
+        console.log("Menjalankan perintah ke Supabase:", actionName);
+        
+        // =========================================================
+        // AKSI 1: MENGAMBIL SELURUH DATA UNTUK DASHBOARD (readData)
+        // =========================================================
+        if (actionName === "readData") {
+          
+          // 1. Ambil pengaturan hari/buffer
+          const { data: setHero } = await supabase.from('global_settings').select('setting_value').eq('setting_name', 'buffer_hero').single();
+          const { data: setVendor } = await supabase.from('global_settings').select('setting_value').eq('setting_name', 'buffer_vendor').single();
+          
+          let settings = { 
+            hero: setHero ? parseInt(setHero.setting_value) : 14, 
+            vendor: setVendor ? parseInt(setVendor.setting_value) : 7 
+          };
 
-        const result = await response.json();
-        if (result.status === "success") {
-          return result.data;
-        } else {
-          throw new Error(result.message || "Terjadi kesalahan internal backend.");
+          // 2. Ambil data Master Artikel
+          const { data: articles, error: errArt } = await supabase.from('articles').select('*');
+          if (errArt) throw errArt;
+
+          // 3. Ambil data Stok/Ukuran (Inventory)
+          const { data: inventory, error: errInv } = await supabase.from('inventory').select('*');
+          if (errInv) throw errInv;
+
+          // 4. Gabungkan (Flatten) agar formatnya cocok dengan HTML Anda yang lama
+          let formattedData = [];
+          
+          articles.forEach(art => {
+            // Cari ukuran yang cocok dengan SKU artikel ini
+            let sizes = inventory.filter(inv => inv.article_sku === art.sku);
+            
+            if(sizes.length === 0) {
+                // Jika artikel baru dibuat dan belum ada stoknya
+                formattedData.push({
+                    sku: art.sku, nama: art.nama, kategori: art.kategori, warna: art.warna, 
+                    status: art.status_tipe, adsGlobal: art.ads_global, isAktif: art.is_aktif ? "Aktif" : "Non-Aktif", 
+                    isPriority: art.is_priority, timestamp: new Date(art.updated_at).toLocaleString('id-ID'),
+                    size: "-", qty: 0, tren: "-"
+                });
+            } else {
+                // Masukkan masing-masing ukuran (S, M, L, dll) ke dalam array
+                sizes.forEach(sz => {
+                  formattedData.push({
+                    sku: art.sku, nama: art.nama, kategori: art.kategori, warna: art.warna, 
+                    status: art.status_tipe, adsGlobal: art.ads_global, isAktif: art.is_aktif ? "Aktif" : "Non-Aktif", 
+                    isPriority: art.is_priority, timestamp: new Date(art.updated_at).toLocaleString('id-ID'),
+                    size: sz.ukuran, qty: sz.qty, tren: sz.tren || "-"
+                  });
+                });
+            }
+          });
+
+          // Kembalikan data ke antarmuka aplikasi
+          return { settings: settings, articles: formattedData };
         }
+        
+        // =========================================================
+        // JIKA ADA AKSI YANG BELUM KITA BUAT KODENYA
+        // =========================================================
+        else {
+           throw new Error("Perintah '" + actionName + "' belum disambungkan ke Supabase.");
+        }
+
       } catch (error) {
-        clearTimeout(timeoutId);
-        if (error.name === "AbortError") {
-          throw new Error("Koneksi internet Anda sedang terhambat/timeout. Silakan coba klik ulang tombol atau periksa jaringan Anda.");
-        }
-        throw error;
+        console.error("Supabase Error:", error);
+        throw new Error(error.message || "Gagal berkomunikasi dengan database.");
       }
     }
 
