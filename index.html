@@ -462,17 +462,15 @@
     // TEMPELKAN API BACKEND GOOGLE WEBAPP ANDA DISINI
     var API_URL = "https://script.google.com/macros/s/AKfycbySvZbT9jJ3ISeGh4bb7TdLE4W8aFR1Rbw199JOK0H6D_HWAG40lG-oIAuFKGuG1EtR0w/exec";
     
-    // MESIN UTAMA FETCH SUPABASE
+    // MESIN UTAMA FETCH SUPABASE (VERSI LENGKAP)
     async function callBackend(actionName, payloadData = {}) {
       try {
-        console.log("Menjalankan perintah ke Supabase:", actionName);
+        console.log("Menjalankan perintah ke Supabase:", actionName, payloadData);
         
         // =========================================================
-        // AKSI 1: MENGAMBIL SELURUH DATA UNTUK DASHBOARD (readData)
+        // 1. MENGAMBIL DATA UNTUK DASHBOARD & PORTAL
         // =========================================================
         if (actionName === "readData") {
-          
-          // 1. Ambil pengaturan hari/buffer
           const { data: setHero } = await supabase.from('global_settings').select('setting_value').eq('setting_name', 'buffer_hero').single();
           const { data: setVendor } = await supabase.from('global_settings').select('setting_value').eq('setting_name', 'buffer_vendor').single();
           
@@ -481,23 +479,16 @@
             vendor: setVendor ? parseInt(setVendor.setting_value) : 7 
           };
 
-          // 2. Ambil data Master Artikel
           const { data: articles, error: errArt } = await supabase.from('articles').select('*');
           if (errArt) throw errArt;
 
-          // 3. Ambil data Stok/Ukuran (Inventory)
           const { data: inventory, error: errInv } = await supabase.from('inventory').select('*');
           if (errInv) throw errInv;
 
-          // 4. Gabungkan (Flatten) agar formatnya cocok dengan HTML Anda yang lama
           let formattedData = [];
-          
           articles.forEach(art => {
-            // Cari ukuran yang cocok dengan SKU artikel ini
             let sizes = inventory.filter(inv => inv.article_sku === art.sku);
-            
             if(sizes.length === 0) {
-                // Jika artikel baru dibuat dan belum ada stoknya
                 formattedData.push({
                     sku: art.sku, nama: art.nama, kategori: art.kategori, warna: art.warna, 
                     status: art.status_tipe, adsGlobal: art.ads_global, isAktif: art.is_aktif ? "Aktif" : "Non-Aktif", 
@@ -505,32 +496,210 @@
                     size: "-", qty: 0, tren: "-"
                 });
             } else {
-                // Masukkan masing-masing ukuran (S, M, L, dll) ke dalam array
                 sizes.forEach(sz => {
                   formattedData.push({
                     sku: art.sku, nama: art.nama, kategori: art.kategori, warna: art.warna, 
                     status: art.status_tipe, adsGlobal: art.ads_global, isAktif: art.is_aktif ? "Aktif" : "Non-Aktif", 
-                    isPriority: art.is_priority, timestamp: new Date(art.updated_at).toLocaleString('id-ID'),
+                    isPriority: art.is_priority, timestamp: new Date(sz.updated_at || art.updated_at).toLocaleString('id-ID'),
                     size: sz.ukuran, qty: sz.qty, tren: sz.tren || "-"
                   });
                 });
             }
           });
-
-          // Kembalikan data ke antarmuka aplikasi
           return { settings: settings, articles: formattedData };
         }
         
         // =========================================================
-        // JIKA ADA AKSI YANG BELUM KITA BUAT KODENYA
+        // 2. SIMPAN / UPDATE ARTIKEL & ALOKASI STOK SATUAN
         // =========================================================
-        else {
-           throw new Error("Perintah '" + actionName + "' belum disambungkan ke Supabase.");
+        else if (actionName === "saveOrUpdateSingleArticle") {
+          const { kategori, sku, nama, warna, status, adsGlobal, sizesData, isArtikelBaru } = payloadData;
+          
+          // A. Upsert ke tabel 'articles'
+          const { error: artErr } = await supabase.from('articles').upsert({
+            sku: sku,
+            nama: isArtikelBaru ? nama : undefined, // hanya set nama jika artikel baru
+            kategori: finalKategori = kategori,
+            warna: isArtikelBaru ? warna : undefined,
+            status_tipe: status,
+            ads_global: adsGlobal,
+            updated_at: new Date()
+          }, { onConflict: 'sku' });
+          
+          if (artErr) throw artErr;
+
+          // B. Update stok per ukuran di tabel 'inventory' & catat log perubahan
+          for (let sz of sizesData) {
+            if (sz.isChanged || isArtikelBaru) {
+              // Ambil qty lama untuk keperluan logging history
+              const { data: oldInv } = await supabase.from('inventory').select('qty').eq('article_sku', sku).eq('ukuran', sz.size).single();
+              let oldQty = oldInv ? oldInv.qty : 0;
+              let selisih = sz.qty - oldQty;
+              let trenSimbol = selisih > 0 ? "▲" : (selisih < 0 ? "▼" : "-");
+
+              // Simpan perubahan ke inventory
+              const { error: invErr } = await supabase.from('inventory').upsert({
+                article_sku: sku,
+                ukuran: sz.size,
+                qty: sz.qty,
+                tren: trenSimbol,
+                updated_at: new Date()
+              }, { onConflict: 'article_sku,ukuran' });
+              
+              if (invErr) throw invErr;
+
+              // Catat riwayat ke stock_logs
+              if (selisih !== 0) {
+                await supabase.from('stock_logs').insert({
+                  article_sku: sku,
+                  ukuran: sz.size,
+                  old_qty: oldQty,
+                  new_qty: sz.qty,
+                  perubahan: (selisih > 0 ? "+" : "") + selisih,
+                  timestamp: new Date().toLocaleString('id-ID')
+                });
+              }
+            }
+          }
+          return "Data artikel dan alokasi matriks ukuran berhasil disimpan di Supabase!";
+        }
+
+        // =========================================================
+        // 3. SIMPAN PENGATURAN BUFFER HARI
+        // =========================================================
+        else if (actionName === "saveBufferSettings") {
+          await supabase.from('global_settings').upsert({ setting_name: 'buffer_hero', setting_value: payloadData.heroBuffer.toString() }, { onConflict: 'setting_name' });
+          await supabase.from('global_settings').upsert({ setting_name: 'buffer_vendor', setting_value: payloadData.vendorBuffer.toString() }, { onConflict: 'setting_name' });
+          return "Pengaturan batas buffer hari berhasil diperbarui!";
+        }
+
+        // =========================================================
+        // 4. MENGUBAH STATUS PRIORITAS VENDOR
+        // =========================================================
+        else if (actionName === "setPriorityStatus") {
+          const { error } = await supabase.from('articles').update({ is_priority: payloadData.setAsPriority, updated_at: new Date() }).eq('sku', payloadData.sku);
+          if (error) throw error;
+          return "Status prioritas vendor berhasil diubah!";
+        }
+
+        // =========================================================
+        // 5. MENGATUR STATUS AKTIF ARTIKEL DI KATALOG MASTER
+        // =========================================================
+        else if (actionName === "toggleStatusAktif") {
+          let isAktifBool = payloadData.statusBaru === "Aktif";
+          const { error } = await supabase.from('articles').update({ is_aktif: isAktifBool, updated_at: new Date() }).eq('sku', payloadData.sku);
+          if (error) throw error;
+          return "Status visibilitas katalog berhasil diperbarui.";
+        }
+
+        // =========================================================
+        // 6. AMBIL LOG RIWAYAT 5 HARI TERAKHIR PER ARTIKEL
+        // =========================================================
+        else if (actionName === "getStockLog") {
+          const { data, error } = await supabase.from('stock_logs')
+            .select('*')
+            .eq('article_sku', payloadData.sku)
+            .order('id', { ascending: false })
+            .limit(20); // batasi pengambilan data historis terbaru
+          if (error) throw error;
+          return data;
+        }
+
+        // =========================================================
+        // 7. MANAJEMEN AKUN VENDOR (READ, SAVE, UPDATE, DELETE)
+        // =========================================================
+        else if (actionName === "readVendorData") {
+          const { data, error } = await supabase.from('vendors').select('*');
+          if (error) throw error;
+          // Mengembalikan format struktur list sesuai kebutuhan aplikasi lama
+          return data.map(v => ({ nama: v.nama, username: v.username, akses: v.kategori_akses }));
+        }
+        else if (actionName === "saveNewVendor" || actionName === "updateVendorAccess") {
+          const { error } = await supabase.from('vendors').upsert({
+            username: payloadData.username,
+            nama: payloadData.nama,
+            kategori_akses: payloadData.listKategori,
+            updated_at: new Date()
+          }, { onConflict: 'username' });
+          if (error) throw error;
+          return "Data otorisasi kategori vendor berhasil diamankan!";
+        }
+        else if (actionName === "deleteVendorAccount") {
+          const { error } = await supabase.from('vendors').delete().eq('username', payloadData.username);
+          if (error) throw error;
+          return "Akun akses rekanan vendor berhasil dihapus permanen.";
+        }
+
+        // =========================================================
+        // 8. MONITOR BATCH KOTRETAN VENDOR (KOTRETAN DB)
+        // =========================================================
+        else if (actionName === "loadSavedKotretanDb") {
+          const { data, error } = await supabase.from('vendor_drafts').select('*');
+          if (error) throw error;
+          
+          // Re-structure menjadi object map key-value { username: [sku1, sku2] }
+          let map = {};
+          data.forEach(row => {
+            if(!map[row.vendor_username]) map[row.vendor_username] = [];
+            map[row.vendor_username].push(row.article_sku);
+          });
+          return map;
+        }
+        else if (actionName === "clearVendorKotretanDb") {
+          const { error } = await supabase.from('vendor_drafts').delete().eq('vendor_username', payloadData.vendorUser);
+          if (error) throw error;
+          return true;
+        }
+        else if (actionName === "saveArticleToKotretanDb") {
+          const { error } = await supabase.from('vendor_drafts').insert({
+            vendor_username: payloadData.vendorUser,
+            article_sku: payloadData.sku
+          });
+          if (error) throw error;
+          return true;
+        }
+
+        // =========================================================
+        // 9. BULK IMPORT MASTER DATA DARI DATA EXCEL
+        // =========================================================
+        else if (actionName === "importBulkData") {
+          const rows = payloadData.dataArray; // Array array dari fileExcel
+          
+          for (let row of rows) {
+            if (row.length < 5) continue;
+            let kategori = row[0] ? row[0].toString().toUpperCase().trim() : "";
+            let sku = row[1] ? row[1].toString().trim() : "";
+            let nama = row[2] ? row[2].toString().trim() : "";
+            let warna = row[3] ? row[3].toString().trim() : "-";
+            let qtyTotalExcel = parseInt(row[4]) || 0;
+
+            if(!sku || !nama || !kategori) continue;
+
+            // Masukkan data dasar artikel
+            await supabase.from('articles').upsert({
+              sku: sku, nama: nama, kategori: kategori, warna: warna,
+              status_tipe: "Real Stock", ads_global: 0, is_aktif: true, updated_at: new Date()
+            }, { onConflict: 'sku' });
+
+            // Tentukan breakdown size default horizontal
+            let defaultSizes = ["S", "M", "L", "XL", "XXL"];
+            if (kategori === "BAG" || kategori === "BAGS") defaultSizes = ["ALL SIZE"];
+            else if (["PANTS", "SWEAT PANTS"].includes(kategori)) defaultSizes = ["28", "30", "32", "34"];
+
+            // Bagi rata qty total untuk setup awal atau letakkan di size pertama
+            for(let i=0; i<defaultSizes.length; i++) {
+              let targetQty = i === 0 ? qtyTotalExcel : 0; // Masukkan dummy inisiasi di size utama atau bagi rata
+              await supabase.from('inventory').upsert({
+                article_sku: sku, ukuran: defaultSizes[i], qty: targetQty, tren: "-", updated_at: new Date()
+              }, { onConflict: 'article_sku,ukuran' });
+            }
+          }
+          return "Proses bulk import data dari Excel horizontal berhasil dipetakan ke Supabase!";
         }
 
       } catch (error) {
-        console.error("Supabase Error:", error);
-        throw new Error(error.message || "Gagal berkomunikasi dengan database.");
+        console.error("Supabase Operation Error:", error);
+        throw new Error(error.message || "Gagal mengeksekusi perintah database.");
       }
     }
 
