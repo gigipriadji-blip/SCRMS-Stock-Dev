@@ -447,12 +447,12 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
   <script>
-   // Konfigurasi Supabase
-   const SUPABASE_URL = "https://iiuwynlxqfupxklauied.supabase.co";
-   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpdXd5bmx4cWZ1cHhrbGF1aWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyOTY1MTYsImV4cCI6MjA5OTg3MjUxNn0.k_ViDcTyv-0vqEYtPm8Gh2EeIY3U9_7q_i-qduToRiw";
+  // Konfigurasi Supabase
+const SUPABASE_URL = "https://iiuwynlxqfupxklauied.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpdXd5bmx4cWZ1cHhrbGF1aWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyOTY1MTYsImV4cCI6MjA5OTg3MjUxNn0.k_ViDcTyv-0vqEYtPm8Gh2EeIY3U9_7q_i-qduToRiw";
 
-   // Membuat client Supabase
-   const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Membuat client Supabase dengan nama variabel baru agar tidak bentrok
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
     
     // =================================================================
@@ -471,18 +471,18 @@
         // 1. MENGAMBIL DATA UNTUK DASHBOARD & PORTAL
         // =========================================================
         if (actionName === "readData") {
-          const { data: setHero } = await supabase.from('global_settings').select('setting_value').eq('setting_name', 'buffer_hero').single();
-          const { data: setVendor } = await supabase.from('global_settings').select('setting_value').eq('setting_name', 'buffer_vendor').single();
+          const { data: setHero } = await supabaseClient.from('global_settings').select('setting_value').eq('setting_name', 'buffer_hero').single();
+          const { data: setVendor } = await supabaseClient.from('global_settings').select('setting_value').eq('setting_name', 'buffer_vendor').single();
           
           let settings = { 
             hero: setHero ? parseInt(setHero.setting_value) : 14, 
             vendor: setVendor ? parseInt(setVendor.setting_value) : 7 
           };
 
-          const { data: articles, error: errArt } = await supabase.from('articles').select('*');
+          const { data: articles, error: errArt } = await supabaseClient.from('articles').select('*');
           if (errArt) throw errArt;
 
-          const { data: inventory, error: errInv } = await supabase.from('inventory').select('*');
+          const { data: inventory, error: errInv } = await supabaseClient.from('inventory').select('*');
           if (errInv) throw errInv;
 
           let formattedData = [];
@@ -516,7 +516,7 @@
           const { kategori, sku, nama, warna, status, adsGlobal, sizesData, isArtikelBaru } = payloadData;
           
           // A. Upsert ke tabel 'articles'
-          const { error: artErr } = await supabase.from('articles').upsert({
+          const { error: artErr } = await supabaseClient.from('articles').upsert({
             sku: sku,
             nama: isArtikelBaru ? nama : undefined, // hanya set nama jika artikel baru
             kategori: kategori,
@@ -532,13 +532,13 @@
           for (let sz of sizesData) {
             if (sz.isChanged || isArtikelBaru) {
               // Ambil qty lama untuk keperluan logging history
-              const { data: oldInv } = await supabase.from('inventory').select('qty').eq('article_sku', sku).eq('ukuran', sz.size).single();
+              const { data: oldInv } = await supabaseClient.from('inventory').select('qty').eq('article_sku', sku).eq('ukuran', sz.size).single();
               let oldQty = oldInv ? oldInv.qty : 0;
               let selisih = sz.qty - oldQty;
               let trenSimbol = selisih > 0 ? "▲" : (selisih < 0 ? "▼" : "-");
 
               // Simpan perubahan ke inventory
-              const { error: invErr } = await supabase.from('inventory').upsert({
+              const { error: invErr } = await supabaseClient.from('inventory').upsert({
                 article_sku: sku,
                 ukuran: sz.size,
                 qty: sz.qty,
@@ -550,7 +550,7 @@
 
               // Catat riwayat ke stock_logs
               if (selisih !== 0) {
-                await supabase.from('stock_logs').insert({
+                await supabaseClient.from('stock_logs').insert({
                   article_sku: sku,
                   ukuran: sz.size,
                   old_qty: oldQty,
@@ -568,8 +568,8 @@
         // 3. SIMPAN PENGATURAN BUFFER HARI
         // =========================================================
         else if (actionName === "saveBufferSettings") {
-          await supabase.from('global_settings').upsert({ setting_name: 'buffer_hero', setting_value: payloadData.heroBuffer.toString() }, { onConflict: 'setting_name' });
-          await supabase.from('global_settings').upsert({ setting_name: 'buffer_vendor', setting_value: payloadData.vendorBuffer.toString() }, { onConflict: 'setting_name' });
+          await supabaseClient.from('global_settings').upsert({ setting_name: 'buffer_hero', setting_value: payloadData.heroBuffer.toString() }, { onConflict: 'setting_name' });
+          await supabaseClient.from('global_settings').upsert({ setting_name: 'buffer_vendor', setting_value: payloadData.vendorBuffer.toString() }, { onConflict: 'setting_name' });
           return "Pengaturan batas buffer hari berhasil diperbarui!";
         }
 
@@ -577,7 +577,7 @@
         // 4. MENGUBAH STATUS PRIORITAS VENDOR
         // =========================================================
         else if (actionName === "setPriorityStatus") {
-          const { error } = await supabase.from('articles').update({ is_priority: payloadData.setAsPriority, updated_at: new Date() }).eq('sku', payloadData.sku);
+          const { error } = await supabaseClient.from('articles').update({ is_priority: payloadData.setAsPriority, updated_at: new Date() }).eq('sku', payloadData.sku);
           if (error) throw error;
           return "Status prioritas vendor berhasil diubah!";
         }
@@ -587,7 +587,7 @@
         // =========================================================
         else if (actionName === "toggleStatusAktif") {
           let isAktifBool = payloadData.statusBaru === "Aktif";
-          const { error } = await supabase.from('articles').update({ is_aktif: isAktifBool, updated_at: new Date() }).eq('sku', payloadData.sku);
+          const { error } = await supabaseClient.from('articles').update({ is_aktif: isAktifBool, updated_at: new Date() }).eq('sku', payloadData.sku);
           if (error) throw error;
           return "Status visibilitas katalog berhasil diperbarui.";
         }
@@ -596,7 +596,7 @@
         // 6. AMBIL LOG RIWAYAT 5 HARI TERAKHIR PER ARTIKEL
         // =========================================================
         else if (actionName === "getStockLog") {
-          const { data, error } = await supabase.from('stock_logs')
+          const { data, error } = await supabaseClient.from('stock_logs')
             .select('*')
             .eq('article_sku', payloadData.sku)
             .order('id', { ascending: false })
@@ -609,13 +609,13 @@
         // 7. MANAJEMEN AKUN VENDOR (READ, SAVE, UPDATE, DELETE)
         // =========================================================
         else if (actionName === "readVendorData") {
-          const { data, error } = await supabase.from('vendors').select('*');
+          const { data, error } = await supabaseClient.from('vendors').select('*');
           if (error) throw error;
           // Mengembalikan format struktur list sesuai kebutuhan aplikasi lama
           return data.map(v => ({ nama: v.nama, username: v.username, akses: v.kategori_akses }));
         }
         else if (actionName === "saveNewVendor" || actionName === "updateVendorAccess") {
-          const { error } = await supabase.from('vendors').upsert({
+          const { error } = await supabaseClient.from('vendors').upsert({
             username: payloadData.username,
             nama: payloadData.nama,
             kategori_akses: payloadData.listKategori,
@@ -625,7 +625,7 @@
           return "Data otorisasi kategori vendor berhasil diamankan!";
         }
         else if (actionName === "deleteVendorAccount") {
-          const { error } = await supabase.from('vendors').delete().eq('username', payloadData.username);
+          const { error } = await supabaseClient.from('vendors').delete().eq('username', payloadData.username);
           if (error) throw error;
           return "Akun akses rekanan vendor berhasil dihapus permanen.";
         }
@@ -634,7 +634,7 @@
         // 8. MONITOR BATCH KOTRETAN VENDOR (KOTRETAN DB)
         // =========================================================
         else if (actionName === "loadSavedKotretanDb") {
-          const { data, error } = await supabase.from('vendor_drafts').select('*');
+          const { data, error } = await supabaseClient.from('vendor_drafts').select('*');
           if (error) throw error;
           
           // Re-structure menjadi object map key-value { username: [sku1, sku2] }
@@ -646,12 +646,12 @@
           return map;
         }
         else if (actionName === "clearVendorKotretanDb") {
-          const { error } = await supabase.from('vendor_drafts').delete().eq('vendor_username', payloadData.vendorUser);
+          const { error } = await supabaseClient.from('vendor_drafts').delete().eq('vendor_username', payloadData.vendorUser);
           if (error) throw error;
           return true;
         }
         else if (actionName === "saveArticleToKotretanDb") {
-          const { error } = await supabase.from('vendor_drafts').insert({
+          const { error } = await supabaseClient.from('vendor_drafts').insert({
             vendor_username: payloadData.vendorUser,
             article_sku: payloadData.sku
           });
@@ -676,7 +676,7 @@
             if(!sku || !nama || !kategori) continue;
 
             // Masukkan data dasar artikel
-            await supabase.from('articles').upsert({
+            await supabaseClient.from('articles').upsert({
               sku: sku, nama: nama, kategori: kategori, warna: warna,
               status_tipe: "Real Stock", ads_global: 0, is_aktif: true, updated_at: new Date()
             }, { onConflict: 'sku' });
@@ -689,7 +689,7 @@
             // Bagi rata qty total untuk setup awal atau letakkan di size pertama
             for(let i=0; i<defaultSizes.length; i++) {
               let targetQty = i === 0 ? qtyTotalExcel : 0; // Masukkan dummy inisiasi di size utama atau bagi rata
-              await supabase.from('inventory').upsert({
+              await supabaseClient.from('inventory').upsert({
                 article_sku: sku, ukuran: defaultSizes[i], qty: targetQty, tren: "-", updated_at: new Date()
               }, { onConflict: 'article_sku,ukuran' });
             }
