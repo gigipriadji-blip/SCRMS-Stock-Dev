@@ -521,9 +521,9 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             name: isArtikelBaru ? nama : undefined,
             category_id: kategori,
             color: isArtikelBaru ? warna : undefined,
-            status: true, // Karena tipenya boolean, kita set true (Aktif) untuk artikel baru
-            ads: adsGlobal, // Kita masukkan data ke kolom 'ads' asli bawaan Supabase Anda
-            updated_at: new Date()
+            is_active: true, // <--- INI PERBAIKANNYA (sebelumnya tertulis 'status')
+            ads: adsGlobal
+            // Saya juga menghapus 'updated_at' di sini karena di tabel Anda kolomnya bernama 'created_at' dan sudah terisi otomatis oleh Supabase
           }, { onConflict: 'sku' });
           
           if (artErr) throw artErr;
@@ -543,7 +543,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 ukuran: sz.size,
                 qty: sz.qty,
                 tren: trenSimbol,
-                updated_at: new Date()
+                created_at: new Date() // Menggunakan kolom 'created_at' yang ada di tabel Anda
               }, { onConflict: 'article_sku,ukuran' });
               
               if (invErr) throw invErr;
