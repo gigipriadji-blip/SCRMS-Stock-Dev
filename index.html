@@ -463,7 +463,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
     async function callBackend(actionName, payloadData = {}) {
         console.log("Menjalankan perintah ke Supabase:", actionName, payloadData);
-        
         try {
             // ==========================================
             // AKSI 1: MEMBACA DATA UTAMA (readData)
@@ -495,7 +494,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 }
 
                 let formattedArticles = [];
-                
                 articlesData.forEach(art => {
                     const matchingSizes = invData.filter(i => i.article_sku === art.sku);
                     
@@ -533,7 +531,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                         });
                     }
                 });
-
                 return {
                     articles: formattedArticles,
                     settings: {
@@ -565,13 +562,11 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             // ==========================================
             else if (actionName === "saveOrUpdateSingleArticle") {
                 const { kategori, sku, nama, warna, status, adsGlobal, sizesData, isArtikelBaru } = payloadData;
-
-                // Ambil data nama dan warna yang sudah ada dari form atau cari dari input
+                
                 var finalNama = nama || document.getElementById('comboInputArtikel').value.split(' [')[0];
                 var finalWarna = warna;
                 
                 if (!isArtikelBaru) {
-                    // Jika barang lama, cari detail warna dari globalData bawaan aplikasi
                     var matchGlobal = globalData.find(g => g.sku === sku);
                     if (matchGlobal) {
                         if (!finalNama || finalNama.includes("[ARTIKEL BARU]")) finalNama = matchGlobal.nama;
@@ -579,7 +574,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                     }
                 }
 
-               const { error: artErr } = await supabaseClient.from('articles').upsert({
+                const { error: artErr } = await supabaseClient.from('articles').upsert({
                     sku: sku,
                     name: finalNama, 
                     kategori: kategori, 
@@ -588,10 +583,8 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                     ads_global: parseFloat(adsGlobal) || 0, 
                     is_active: true
                 }, { onConflict: 'sku' });
-
                 if (artErr) throw artErr;
 
-                // Loop penyimpanan data stok ukuran ke tabel inventory
                 for (let sz of sizesData) {
                     if (sz.isChanged || isArtikelBaru) {
                         const { data: oldInv, error: readInvErr } = await supabaseClient
@@ -600,13 +593,12 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                             .eq('article_sku', sku)
                             .eq('ukuran', sz.size)
                             .maybeSingle();
-                        
                         if (readInvErr) throw readInvErr;
                         
                         let oldQty = oldInv ? oldInv.qty : 0;
                         let selisih = sz.qty - oldQty;
                         let trenSimbol = selisih > 0 ? "▲" : (selisih < 0 ? "▼" : "-");
-
+                        
                         const { error: invErr } = await supabaseClient.from('inventory').upsert({
                             article_sku: sku,
                             ukuran: sz.size,
@@ -614,7 +606,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                             tren: trenSimbol,
                             created_at: new Date()
                         }, { onConflict: 'article_sku,ukuran' });
-
                         if (invErr) throw invErr;
 
                         if (selisih !== 0) {
@@ -630,14 +621,9 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                         }
                     }
                 }
-
                 return isArtikelBaru ? "Artikel baru berhasil ditambahkan!" : "Perubahan data stok berhasil diperbarui!";
             }
-      } catch (error) {
-            console.error("Supabase Operation Error:", error);
-            throw new Error(error.message || "Gagal mengeksekusi perintah database.");
-        }
-    } // <-- Menutup fungsi utama callBackend(actionName, payloadData)
+
             // =========================================================
             // 4. MENGUBAH STATUS PRIORITAS VENDOR
             // =========================================================
@@ -652,7 +638,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             // =========================================================
             else if (actionName === "toggleStatusAktif") {
                 let isAktifBool = payloadData.statusBaru === "Aktif";
-                // Catatan: Saya menyesuaikan is_aktif menjadi is_active agar sesuai dengan kolom Supabase Anda
                 const { error } = await supabaseClient.from('articles').update({ is_active: isAktifBool, updated_at: new Date() }).eq('sku', payloadData.sku);
                 if (error) throw error;
                 return "Status visibilitas katalog berhasil diperbarui.";
@@ -738,23 +723,23 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                     if(!sku || !nama || !kategori) continue;
                     await supabaseClient.from('articles').upsert({
                         sku: sku, 
-                        name: nama, // Disesuaikan dengan kolom Supabase
+                        name: nama, 
                         kategori: kategori, 
-                        color: warna, // Disesuaikan dengan kolom Supabase
+                        color: warna, 
                         status_tipe: "Real Stock", 
-                        ads: 0, // Disesuaikan dengan kolom Supabase
+                        ads_global: 0, 
                         is_active: true, 
                         updated_at: new Date()
                     }, { onConflict: 'sku' });
                     
                     let defaultSizes = ["S", "M", "L", "XL", "XXL"];
                     if (kategori === "BAG" || kategori === "BAGS") defaultSizes = ["ALL SIZE"];
-                    else if (["PANTS", "SWEAT PANTS"].includes(kategori)) defaultSizes = ["28", "30", "32", "34"];
+                    else if (["PANTS", "SWEAT PANTS", "SWEATPANTS"].includes(kategori)) defaultSizes = ["28", "30", "32", "34"];
                     
                     for(let i=0; i<defaultSizes.length; i++) {
                         let targetQty = i === 0 ? qtyTotalExcel : 0; 
                         await supabaseClient.from('inventory').upsert({
-                            article_sku: sku, ukuran: defaultSizes[i], qty: targetQty, tren: "-", updated_at: new Date()
+                            article_sku: sku, ukuran: defaultSizes[i], qty: targetQty, tren: "-", created_at: new Date()
                         }, { onConflict: 'article_sku,ukuran' });
                     }
                 }
