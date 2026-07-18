@@ -780,8 +780,14 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                         }, { onConflict: 'article_sku,ukuran' });
                     }
                 }
-                return "Proses bulk import data dari Excel berhasil dipetakan ke Supabase!";
+               return "Proses bulk import data dari Excel berhasil dipetakan ke Supabase!";
             }
+
+        } catch (error) {
+            console.error("Supabase Operation Error:", error);
+            throw new Error(error.message || "Gagal mengeksekusi perintah database.");
+        }
+    } // <-- Menutup fungsi utama callBackend secara sah
 
     // =================================================================
     // STATE VARIABEL APLIKASI
