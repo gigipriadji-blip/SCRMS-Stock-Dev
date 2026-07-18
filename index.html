@@ -621,141 +621,133 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 return isArtikelBaru ? "Artikel baru berhasil ditambahkan!" : "Perubahan data stok berhasil diperbarui!";
             }
 
-        } catch (err) {
-            console.error("Supabase Operation Error:", err);
-            throw new Error(err.message || "Gagal beroperasi dengan database cloud.");
-        }
-    }
-
-        // =========================================================
-        // 4. MENGUBAH STATUS PRIORITAS VENDOR
-        // =========================================================
-        else if (actionName === "setPriorityStatus") {
-          const { error } = await supabaseClient.from('articles').update({ is_priority: payloadData.setAsPriority, updated_at: new Date() }).eq('sku', payloadData.sku);
-          if (error) throw error;
-          return "Status prioritas vendor berhasil diubah!";
-        }
-    }
-    
-        // =========================================================
-        // 5. MENGATUR STATUS AKTIF ARTIKEL DI KATALOG MASTER
-        // =========================================================
-        else if (actionName === "toggleStatusAktif") {
-          let isAktifBool = payloadData.statusBaru === "Aktif";
-          const { error } = await supabaseClient.from('articles').update({ is_aktif: isAktifBool, updated_at: new Date() }).eq('sku', payloadData.sku);
-          if (error) throw error;
-          return "Status visibilitas katalog berhasil diperbarui.";
-        }
-
-        // =========================================================
-        // 6. AMBIL LOG RIWAYAT 5 HARI TERAKHIR PER ARTIKEL
-        // =========================================================
-        else if (actionName === "getStockLog") {
-          const { data, error } = await supabaseClient.from('stock_logs')
-            .select('*')
-            .eq('article_sku', payloadData.sku)
-            .order('id', { ascending: false })
-            .limit(20); // batasi pengambilan data historis terbaru
-          if (error) throw error;
-          return data;
-        }
-
-        // =========================================================
-        // 7. MANAJEMEN AKUN VENDOR (READ, SAVE, UPDATE, DELETE)
-        // =========================================================
-        else if (actionName === "readVendorData") {
-          const { data, error } = await supabaseClient.from('vendors').select('*');
-          if (error) throw error;
-          // Mengembalikan format struktur list sesuai kebutuhan aplikasi lama
-          return data.map(v => ({ nama: v.nama, username: v.username, akses: v.kategori_akses }));
-        }
-        else if (actionName === "saveNewVendor" || actionName === "updateVendorAccess") {
-          const { error } = await supabaseClient.from('vendors').upsert({
-            username: payloadData.username,
-            nama: payloadData.nama,
-            kategori_akses: payloadData.listKategori,
-            updated_at: new Date()
-          }, { onConflict: 'username' });
-          if (error) throw error;
-          return "Data otorisasi kategori vendor berhasil diamankan!";
-        }
-        else if (actionName === "deleteVendorAccount") {
-          const { error } = await supabaseClient.from('vendors').delete().eq('username', payloadData.username);
-          if (error) throw error;
-          return "Akun akses rekanan vendor berhasil dihapus permanen.";
-        }
-
-        // =========================================================
-        // 8. MONITOR BATCH KOTRETAN VENDOR (KOTRETAN DB)
-        // =========================================================
-        else if (actionName === "loadSavedKotretanDb") {
-          const { data, error } = await supabaseClient.from('vendor_drafts').select('*');
-          if (error) throw error;
-          
-          // Re-structure menjadi object map key-value { username: [sku1, sku2] }
-          let map = {};
-          data.forEach(row => {
-            if(!map[row.vendor_username]) map[row.vendor_username] = [];
-            map[row.vendor_username].push(row.article_sku);
-          });
-          return map;
-        }
-        else if (actionName === "clearVendorKotretanDb") {
-          const { error } = await supabaseClient.from('vendor_drafts').delete().eq('vendor_username', payloadData.vendorUser);
-          if (error) throw error;
-          return true;
-        }
-        else if (actionName === "saveArticleToKotretanDb") {
-          const { error } = await supabaseClient.from('vendor_drafts').insert({
-            vendor_username: payloadData.vendorUser,
-            article_sku: payloadData.sku
-          });
-          if (error) throw error;
-          return true;
-        }
-
-        // =========================================================
-        // 9. BULK IMPORT MASTER DATA DARI DATA EXCEL
-        // =========================================================
-        else if (actionName === "importBulkData") {
-          const rows = payloadData.dataArray; // Array array dari fileExcel
-          
-          for (let row of rows) {
-            if (row.length < 5) continue;
-            let kategori = row[0] ? row[0].toString().toUpperCase().trim() : "";
-            let sku = row[1] ? row[1].toString().trim() : "";
-            let nama = row[2] ? row[2].toString().trim() : "";
-            let warna = row[3] ? row[3].toString().trim() : "-";
-            let qtyTotalExcel = parseInt(row[4]) || 0;
-
-            if(!sku || !nama || !kategori) continue;
-
-            // Masukkan data dasar artikel
-            await supabaseClient.from('articles').upsert({
-              sku: sku, nama: nama, kategori: kategori, warna: warna,
-              status_tipe: "Real Stock", ads_global: 0, is_aktif: true, updated_at: new Date()
-            }, { onConflict: 'sku' });
-
-            // Tentukan breakdown size default horizontal
-            let defaultSizes = ["S", "M", "L", "XL", "XXL"];
-            if (kategori === "BAG" || kategori === "BAGS") defaultSizes = ["ALL SIZE"];
-            else if (["PANTS", "SWEAT PANTS"].includes(kategori)) defaultSizes = ["28", "30", "32", "34"];
-
-            // Bagi rata qty total untuk setup awal atau letakkan di size pertama
-            for(let i=0; i<defaultSizes.length; i++) {
-              let targetQty = i === 0 ? qtyTotalExcel : 0; // Masukkan dummy inisiasi di size utama atau bagi rata
-              await supabaseClient.from('inventory').upsert({
-                article_sku: sku, ukuran: defaultSizes[i], qty: targetQty, tren: "-", updated_at: new Date()
-              }, { onConflict: 'article_sku,ukuran' });
+            // =========================================================
+            // 4. MENGUBAH STATUS PRIORITAS VENDOR
+            // =========================================================
+            else if (actionName === "setPriorityStatus") {
+                const { error } = await supabaseClient.from('articles').update({ is_priority: payloadData.setAsPriority, updated_at: new Date() }).eq('sku', payloadData.sku);
+                if (error) throw error;
+                return "Status prioritas vendor berhasil diubah!";
             }
-          }
-          return "Proses bulk import data dari Excel horizontal berhasil dipetakan ke Supabase!";
-        }
+            
+            // =========================================================
+            // 5. MENGATUR STATUS AKTIF ARTIKEL DI KATALOG MASTER
+            // =========================================================
+            else if (actionName === "toggleStatusAktif") {
+                let isAktifBool = payloadData.statusBaru === "Aktif";
+                // Catatan: Saya menyesuaikan is_aktif menjadi is_active agar sesuai dengan kolom Supabase Anda
+                const { error } = await supabaseClient.from('articles').update({ is_active: isAktifBool, updated_at: new Date() }).eq('sku', payloadData.sku);
+                if (error) throw error;
+                return "Status visibilitas katalog berhasil diperbarui.";
+            }
 
-      } catch (error) {
-        console.error("Supabase Operation Error:", error);
-        throw new Error(error.message || "Gagal mengeksekusi perintah database.");
-      }
+            // =========================================================
+            // 6. AMBIL LOG RIWAYAT 5 HARI TERAKHIR PER ARTIKEL
+            // =========================================================
+            else if (actionName === "getStockLog") {
+                const { data, error } = await supabaseClient.from('stock_logs')
+                    .select('*')
+                    .eq('article_sku', payloadData.sku)
+                    .order('id', { ascending: false })
+                    .limit(20);
+                if (error) throw error;
+                return data;
+            }
+
+            // =========================================================
+            // 7. MANAJEMEN AKUN VENDOR (READ, SAVE, UPDATE, DELETE)
+            // =========================================================
+            else if (actionName === "readVendorData") {
+                const { data, error } = await supabaseClient.from('vendors').select('*');
+                if (error) throw error;
+                return data.map(v => ({ nama: v.nama, username: v.username, akses: v.kategori_akses }));
+            }
+            else if (actionName === "saveNewVendor" || actionName === "updateVendorAccess") {
+                const { error } = await supabaseClient.from('vendors').upsert({
+                    username: payloadData.username,
+                    nama: payloadData.nama,
+                    kategori_akses: payloadData.listKategori,
+                    updated_at: new Date()
+                }, { onConflict: 'username' });
+                if (error) throw error;
+                return "Data otorisasi kategori vendor berhasil diamankan!";
+            }
+            else if (actionName === "deleteVendorAccount") {
+                const { error } = await supabaseClient.from('vendors').delete().eq('username', payloadData.username);
+                if (error) throw error;
+                return "Akun akses rekanan vendor berhasil dihapus permanen.";
+            }
+
+            // =========================================================
+            // 8. MONITOR BATCH KOTRETAN VENDOR (KOTRETAN DB)
+            // =========================================================
+            else if (actionName === "loadSavedKotretanDb") {
+                const { data, error } = await supabaseClient.from('vendor_drafts').select('*');
+                if (error) throw error;
+                let map = {};
+                data.forEach(row => {
+                    if(!map[row.vendor_username]) map[row.vendor_username] = [];
+                    map[row.vendor_username].push(row.article_sku);
+                });
+                return map;
+            }
+            else if (actionName === "clearVendorKotretanDb") {
+                const { error } = await supabaseClient.from('vendor_drafts').delete().eq('vendor_username', payloadData.vendorUser);
+                if (error) throw error;
+                return true;
+            }
+            else if (actionName === "saveArticleToKotretanDb") {
+                const { error } = await supabaseClient.from('vendor_drafts').insert({
+                    vendor_username: payloadData.vendorUser,
+                    article_sku: payloadData.sku
+                });
+                if (error) throw error;
+                return true;
+            }
+
+            // =========================================================
+            // 9. BULK IMPORT MASTER DATA DARI DATA EXCEL
+            // =========================================================
+            else if (actionName === "importBulkData") {
+                const rows = payloadData.dataArray;
+                for (let row of rows) {
+                    if (row.length < 5) continue;
+                    let kategori = row[0] ? row[0].toString().toUpperCase().trim() : "";
+                    let sku = row[1] ? row[1].toString().trim() : "";
+                    let nama = row[2] ? row[2].toString().trim() : "";
+                    let warna = row[3] ? row[3].toString().trim() : "-";
+                    let qtyTotalExcel = parseInt(row[4]) || 0;
+
+                    if(!sku || !nama || !kategori) continue;
+                    await supabaseClient.from('articles').upsert({
+                        sku: sku, 
+                        name: nama, // Disesuaikan dengan kolom Supabase
+                        kategori: kategori, 
+                        color: warna, // Disesuaikan dengan kolom Supabase
+                        status_tipe: "Real Stock", 
+                        ads: 0, // Disesuaikan dengan kolom Supabase
+                        is_active: true, 
+                        updated_at: new Date()
+                    }, { onConflict: 'sku' });
+                    
+                    let defaultSizes = ["S", "M", "L", "XL", "XXL"];
+                    if (kategori === "BAG" || kategori === "BAGS") defaultSizes = ["ALL SIZE"];
+                    else if (["PANTS", "SWEAT PANTS"].includes(kategori)) defaultSizes = ["28", "30", "32", "34"];
+                    
+                    for(let i=0; i<defaultSizes.length; i++) {
+                        let targetQty = i === 0 ? qtyTotalExcel : 0; 
+                        await supabaseClient.from('inventory').upsert({
+                            article_sku: sku, ukuran: defaultSizes[i], qty: targetQty, tren: "-", updated_at: new Date()
+                        }, { onConflict: 'article_sku,ukuran' });
+                    }
+                }
+                return "Proses bulk import data dari Excel berhasil dipetakan ke Supabase!";
+            }
+
+        } catch (error) {
+            console.error("Supabase Operation Error:", error);
+            throw new Error(error.message || "Gagal mengeksekusi perintah database.");
+        }
     }
 
     // =================================================================
