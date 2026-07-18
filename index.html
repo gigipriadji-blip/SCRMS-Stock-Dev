@@ -566,11 +566,15 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 var finalNama = nama || document.getElementById('comboInputArtikel').value.split(' [')[0];
                 var finalWarna = warna;
                 
+                let currentIsActive = true; // Default aktif normal
                 if (!isArtikelBaru) {
+                    // Jika barang lama, cari detail dari globalData bawaan aplikasi
                     var matchGlobal = globalData.find(g => g.sku === sku);
                     if (matchGlobal) {
                         if (!finalNama || finalNama.includes("[ARTIKEL BARU]")) finalNama = matchGlobal.nama;
                         if (!finalWarna) finalWarna = matchGlobal.warna;
+                        // Ambil status aslinya (apakah dia prioritas atau aktif biasa) dari database lokal saat ini
+                        currentIsActive = matchGlobal.isPriority ?? true; 
                     }
                 }
 
@@ -581,7 +585,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                     color: finalWarna || "-", 
                     status_tipe: status, 
                     ads_global: parseFloat(adsGlobal) || 0, 
-                    is_active: true
+                    is_active: currentIsActive
                 }, { onConflict: 'sku' });
                 if (artErr) throw artErr;
 
@@ -1345,9 +1349,20 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
         else sizesList = [{size:"S",qty:0},{size:"M",qty:0},{size:"L",qty:0},{size:"XL",qty:0},{size:"XXL",qty:0}];
       } else {
         var matches = globalData.filter(item => item.sku === targetSku);
-        if(matches.length > 0) {
-          document.getElementById('controlAds').value = matches[0].adsGlobal; document.getElementById('controlStatus').value = matches[0].status;
+       if(matches.length > 0) {
+          document.getElementById('controlAds').value = matches[0].adsGlobal; 
+          document.getElementById('controlStatus').value = matches[0].status;
+
+          // Masukkan data ke array sementara
           matches.forEach(m => sizesList.push({ size: m.size, qty: m.qty }));
+
+          // Urutkan sizesList dari S sampai XXL secara alfabetis/baku sebelum digambar
+          var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
+          sizesList.sort((a, b) => {
+              var idxA = urutanBaku.indexOf((a.size || "").toUpperCase());
+              var idxB = urutanBaku.indexOf((b.size || "").toUpperCase());
+              return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+          });
         }
       }
       var html = ""; sizesList.forEach(s => {
