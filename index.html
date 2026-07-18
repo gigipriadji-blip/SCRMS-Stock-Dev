@@ -456,7 +456,11 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
 
-   // KITA TETAP GUNAKAN NAMA FUNGSI 'callBackend' AGAR KODE BAWAAN TIDAK ERROR
+   // =================================================================
+    // CONFIG BACKEND API & DRIVER KOMUNIKASI SUPABASE
+    // =================================================================
+    // (Gunakan deklarasi yang sudah terisi di baris 452-456 sebelumnya)
+
     async function callBackend(actionName, payloadData = {}) {
         console.log("Menjalankan perintah ke Supabase:", actionName, payloadData);
         
@@ -465,26 +469,22 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             // AKSI 1: MEMBACA DATA UTAMA (readData)
             // ==========================================
             if (actionName === "readData") {
-                // A. Ambil semua artikel aktif dari tabel 'articles'
                 const { data: articlesData, error: artErr } = await supabaseClient
                     .from('articles')
                     .select('*')
                     .eq('is_active', true);
                 if (artErr) throw artErr;
 
-                // B. Ambil rincian kuantitas size dari tabel 'inventory'
                 const { data: invData, error: invErr } = await supabaseClient
                     .from('inventory')
                     .select('*');
                 if (invErr) throw invErr;
 
-                // C. Ambil konfigurasi buffer dari tabel 'global_settings'
                 const { data: settingsData, error: setErr } = await supabaseClient
                     .from('global_settings')
                     .select('*');
                 if (setErr) throw setErr;
 
-                // Penerjemah Data Buffer agar tidak mental ke angka 14 lagi
                 let heroBufferValue = 14; 
                 let vendorBufferValue = 7;
                 if (settingsData && settingsData.length > 0) {
@@ -494,15 +494,12 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                     if (vendorRow) vendorBufferValue = parseFloat(vendorRow.value) || 7;
                 }
 
-                // Strukturkan ulang data agar sesuai dengan format asli yang diminta oleh index.html
                 let formattedArticles = [];
                 
                 articlesData.forEach(art => {
-                    // Cari semua size yang dimiliki oleh SKU ini di tabel inventory
                     const matchingSizes = invData.filter(i => i.article_sku === art.sku);
                     
                     if (matchingSizes.length === 0) {
-                        // Jika belum ada record size di inventory, buat baris kosong standar agar UI tidak crash
                         formattedArticles.push({
                             sku: art.sku,
                             nama: art.name,
@@ -511,14 +508,13 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                             status: art.status_tipe || "Fake Stock",
                             adsGlobal: parseFloat(art.ads) || 0,
                             isAktif: "Aktif",
-                            isPriority: art.is_active ? false : false, // Sesuai default status prioritas
+                            isPriority: false,
                             timestamp: art.created_at ? new Date(art.created_at).toLocaleString('id-ID') : "-",
                             size: "-",
                             qty: 0,
                             tren: "-"
                         });
                     } else {
-                        // Jika ada data size, pecah menjadi baris horizontal sesuai kebutuhan renderCards() bawaan aplikasi
                         matchingSizes.forEach(sz => {
                             formattedArticles.push({
                                 sku: art.sku,
@@ -550,14 +546,12 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             // ==========================================
             // AKSI 2: MENYIMPAN PENGATURAN BUFFER
             // ==========================================
-            if (actionName === "saveBufferSettings") {
-                // Update buffer_hero
+            else if (actionName === "saveBufferSettings") {
                 const { error: heroErr } = await supabaseClient
                     .from('global_settings')
                     .upsert({ key: 'buffer_hero', value: payloadData.heroBuffer.toString() }, { onConflict: 'key' });
                 if (heroErr) throw heroErr;
 
-                // Update buffer_vendor
                 const { error: vendorErr } = await supabaseClient
                     .from('global_settings')
                     .upsert({ key: 'buffer_vendor', value: payloadData.vendorBuffer.toString() }, { onConflict: 'key' });
@@ -569,26 +563,23 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             // ==========================================
             // AKSI 3: SIMPAN ATAU UPDATE ARTIKEL & STOK
             // ==========================================
-            if (actionName === "saveOrUpdateSingleArticle") {
+            else if (actionName === "saveOrUpdateSingleArticle") {
                 const { kategori, sku, nama, warna, status, adsGlobal, sizesData, isArtikelBaru } = payloadData;
 
-                // A. Upsert ke tabel 'articles'
                 const { error: artErr } = await supabaseClient.from('articles').upsert({
                     sku: sku,
                     name: isArtikelBaru ? nama : undefined,
-                    kategori: kategori, // Menggunakan nama kategori (Teks) langsung
+                    kategori: kategori,
                     color: isArtikelBaru ? warna : undefined,
-                    status_tipe: status, // Menyimpan "Real Stock" / "Fake Stock" ke kolom baru
-                    ads: adsGlobal, // Mengisi kolom ads bawaan Supabase
+                    status_tipe: status,
+                    ads: adsGlobal,
                     is_active: true
                 }, { onConflict: 'sku' });
 
                 if (artErr) throw artErr;
 
-                // B. Loop data ukuran untuk update ke tabel 'inventory' & catat ke 'stock_logs'
                 for (let sz of sizesData) {
                     if (sz.isChanged || isArtikelBaru) {
-                        // 1. Ambil qty lama untuk keperluan logging history
                         const { data: oldInv, error: readInvErr } = await supabaseClient
                             .from('inventory')
                             .select('qty')
@@ -602,7 +593,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                         let selisih = sz.qty - oldQty;
                         let trenSimbol = selisih > 0 ? "▲" : (selisih < 0 ? "▼" : "-");
 
-                        // 2. Simpan kuantitas baru ke tabel 'inventory'
                         const { error: invErr } = await supabaseClient.from('inventory').upsert({
                             article_sku: sku,
                             ukuran: sz.size,
@@ -613,7 +603,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
                         if (invErr) throw invErr;
 
-                        // 3. Catat riwayat log perubahan jika ada selisih angka stok
                         if (selisih !== 0) {
                             const { error: logErr } = await supabaseClient.from('stock_logs').insert({
                                 article_sku: sku,
@@ -621,7 +610,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                                 old_qty: oldQty,
                                 new_qty: sz.qty,
                                 perubahan: (selisih > 0 ? "+" : "") + selisih,
-                                created_at: new Date() // Sesuai dengan kolom default waktu di Supabase Anda
+                                created_at: new Date()
                             });
                             
                             if (logErr) throw logErr;
@@ -629,7 +618,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                     }
                 }
 
-                return isArtikelBaru ? "Artikel baru dan alokasi stok berhasil ditambahkan!" : "Perubahan data stok artikel berhasil diperbarui!";
+                return isArtikelBaru ? "Artikel baru berhasil ditambahkan!" : "Perubahan data stok berhasil diperbarui!";
             }
 
         } catch (err) {
