@@ -569,10 +569,11 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 const { error: artErr } = await supabaseClient.from('articles').upsert({
                     sku: sku,
                     name: isArtikelBaru ? nama : undefined,
-                    kategori: kategori,
+                    kategori: kategori, 
                     color: isArtikelBaru ? warna : undefined,
-                    status_tipe: status,
-                    ads: adsGlobal,
+                    status_tipe: status, 
+                    // PASTIKAN TERTULIS 'ads_global' BUKAN 'ads'
+                    ads_global: parseFloat(adsGlobal) || 0, 
                     is_active: true
                 }, { onConflict: 'sku' });
 
