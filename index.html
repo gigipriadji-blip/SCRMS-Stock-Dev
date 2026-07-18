@@ -445,6 +445,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
   // Konfigurasi Supabase
@@ -456,122 +457,196 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
     
     
     // =================================================================
-    // CONFIG BACKEND API & DRIVER KOMUNIKASI FETCH DENGAN TIMEOUT LOKAL
+    // CONFIG BACKEND API & DRIVER KOMUNIKASI SUPABASE
     // =================================================================
     
-    // TEMPELKAN API BACKEND GOOGLE WEBAPP ANDA DISINI
-    var API_URL = "https://script.google.com/macros/s/AKfycbySvZbT9jJ3ISeGh4bb7TdLE4W8aFR1Rbw199JOK0H6D_HWAG40lG-oIAuFKGuG1EtR0w/exec";
+    const SUPABASE_URL = 'URL_SUPABASE_ANDA';
+    const SUPABASE_ANON_KEY = 'ANON_KEY_ANDA';
     
-    // MESIN UTAMA FETCH SUPABASE (VERSI LENGKAP)
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // KITA TETAP GUNAKAN NAMA FUNGSI 'callBackend' AGAR KODE BAWAAN TIDAK ERROR
+   // KITA TETAP GUNAKAN NAMA FUNGSI 'callBackend' AGAR KODE BAWAAN TIDAK ERROR
     async function callBackend(actionName, payloadData = {}) {
-      try {
         console.log("Menjalankan perintah ke Supabase:", actionName, payloadData);
         
-        // =========================================================
-        // 1. MENGAMBIL DATA UNTUK DASHBOARD & PORTAL
-        // =========================================================
-        if (actionName === "readData") {
-          const { data: setHero } = await supabaseClient.from('global_settings').select('setting_value').eq('setting_name', 'buffer_hero').single();
-          const { data: setVendor } = await supabaseClient.from('global_settings').select('setting_value').eq('setting_name', 'buffer_vendor').single();
-          
-          let settings = { 
-            hero: setHero ? parseInt(setHero.setting_value) : 14, 
-            vendor: setVendor ? parseInt(setVendor.setting_value) : 7 
-          };
+        try {
+            // ==========================================
+            // AKSI 1: MEMBACA DATA UTAMA (readData)
+            // ==========================================
+            if (actionName === "readData") {
+                // A. Ambil semua artikel aktif dari tabel 'articles'
+                const { data: articlesData, error: artErr } = await supabaseClient
+                    .from('articles')
+                    .select('*')
+                    .eq('is_active', true);
+                if (artErr) throw artErr;
 
-          const { data: articles, error: errArt } = await supabaseClient.from('articles').select('*');
-          if (errArt) throw errArt;
+                // B. Ambil rincian kuantitas size dari tabel 'inventory'
+                const { data: invData, error: invErr } = await supabaseClient
+                    .from('inventory')
+                    .select('*');
+                if (invErr) throw invErr;
 
-          const { data: inventory, error: errInv } = await supabaseClient.from('inventory').select('*');
-          if (errInv) throw errInv;
+                // C. Ambil konfigurasi buffer dari tabel 'global_settings'
+                const { data: settingsData, error: setErr } = await supabaseClient
+                    .from('global_settings')
+                    .select('*');
+                if (setErr) throw setErr;
 
-          let formattedData = [];
-          articles.forEach(art => {
-            let sizes = inventory.filter(inv => inv.article_sku === art.sku);
-            if(sizes.length === 0) {
-                formattedData.push({
-                    sku: art.sku, nama: art.name, kategori: art.category_id, warna: art.color, 
-                    status: "Real Stock", adsGlobal: art.ads, isAktif: art.status ? "Aktif" : "Non-Aktif", 
-                    isPriority: art.is_priority, timestamp: new Date(art.updated_at).toLocaleString('id-ID'),
-                    size: "-", qty: 0, tren: "-"
+                // Penerjemah Data Buffer agar tidak mental ke angka 14 lagi
+                let heroBufferValue = 14; 
+                let vendorBufferValue = 7;
+                if (settingsData && settingsData.length > 0) {
+                    const heroRow = settingsData.find(r => r.key === 'buffer_hero');
+                    const vendorRow = settingsData.find(r => r.key === 'buffer_vendor');
+                    if (heroRow) heroBufferValue = parseFloat(heroRow.value) || 14;
+                    if (vendorRow) vendorBufferValue = parseFloat(vendorRow.value) || 7;
+                }
+
+                // Strukturkan ulang data agar sesuai dengan format asli yang diminta oleh index.html
+                let formattedArticles = [];
+                
+                articlesData.forEach(art => {
+                    // Cari semua size yang dimiliki oleh SKU ini di tabel inventory
+                    const matchingSizes = invData.filter(i => i.article_sku === art.sku);
+                    
+                    if (matchingSizes.length === 0) {
+                        // Jika belum ada record size di inventory, buat baris kosong standar agar UI tidak crash
+                        formattedArticles.push({
+                            sku: art.sku,
+                            nama: art.name,
+                            kategori: art.kategori,
+                            warna: art.color,
+                            status: art.status_tipe || "Fake Stock",
+                            adsGlobal: parseFloat(art.ads) || 0,
+                            isAktif: "Aktif",
+                            isPriority: art.is_active ? false : false, // Sesuai default status prioritas
+                            timestamp: art.created_at ? new Date(art.created_at).toLocaleString('id-ID') : "-",
+                            size: "-",
+                            qty: 0,
+                            tren: "-"
+                        });
+                    } else {
+                        // Jika ada data size, pecah menjadi baris horizontal sesuai kebutuhan renderCards() bawaan aplikasi
+                        matchingSizes.forEach(sz => {
+                            formattedArticles.push({
+                                sku: art.sku,
+                                nama: art.name,
+                                kategori: art.kategori,
+                                warna: art.color,
+                                status: art.status_tipe || "Fake Stock",
+                                adsGlobal: parseFloat(art.ads) || 0,
+                                isAktif: "Aktif",
+                                isPriority: false, 
+                                timestamp: sz.created_at ? new Date(sz.created_at).toLocaleString('id-ID') : new Date(art.created_at).toLocaleString('id-ID'),
+                                size: sz.ukuran,
+                                qty: sz.qty,
+                                tren: sz.tren || "-"
+                            });
+                        });
+                    }
                 });
-            } else {
-                sizes.forEach(sz => {
-                  formattedData.push({
-                    sku: art.sku, nama: art.name, kategori: art.category_id, warna: art.color, 
-                    status: "Real Stock", adsGlobal: art.ads, isAktif: art.status ? "Aktif" : "Non-Aktif", 
-                    isPriority: art.is_priority, timestamp: new Date(sz.updated_at || art.updated_at).toLocaleString('id-ID'),
-                    size: sz.ukuran, qty: sz.qty, tren: sz.tren || "-"
-                });
-                });
+
+                return {
+                    articles: formattedArticles,
+                    settings: {
+                        hero: heroBufferValue,
+                        vendor: vendorBufferValue
+                    }
+                };
             }
-          });
-          return { settings: settings, articles: formattedData };
-        }
-        
-        // =========================================================
-        // 2. SIMPAN / UPDATE ARTIKEL & ALOKASI STOK SATUAN
-        // =========================================================
-        else if (actionName === "saveOrUpdateSingleArticle") {
-          const { kategori, sku, nama, warna, status, adsGlobal, sizesData, isArtikelBaru } = payloadData;
-          
-         // A. Upsert ke tabel 'articles'
-          const { error: artErr } = await supabaseClient.from('articles').upsert({
-            sku: sku,
-            name: isArtikelBaru ? nama : undefined,
-            category_id: kategori,
-            color: isArtikelBaru ? warna : undefined,
-            is_active: true, // <--- INI PERBAIKANNYA (sebelumnya tertulis 'status')
-            ads: adsGlobal
-            // Saya juga menghapus 'updated_at' di sini karena di tabel Anda kolomnya bernama 'created_at' dan sudah terisi otomatis oleh Supabase
-          }, { onConflict: 'sku' });
-          
-          if (artErr) throw artErr;
 
-          // B. Update stok per ukuran di tabel 'inventory' & catat log perubahan
-          for (let sz of sizesData) {
-            if (sz.isChanged || isArtikelBaru) {
-              // Ambil qty lama untuk keperluan logging history
-              const { data: oldInv } = await supabaseClient.from('inventory').select('qty').eq('article_sku', sku).eq('ukuran', sz.size).single();
-              let oldQty = oldInv ? oldInv.qty : 0;
-              let selisih = sz.qty - oldQty;
-              let trenSimbol = selisih > 0 ? "▲" : (selisih < 0 ? "▼" : "-");
+            // ==========================================
+            // AKSI 2: MENYIMPAN PENGATURAN BUFFER
+            // ==========================================
+            if (actionName === "saveBufferSettings") {
+                // Update buffer_hero
+                const { error: heroErr } = await supabaseClient
+                    .from('global_settings')
+                    .upsert({ key: 'buffer_hero', value: payloadData.heroBuffer.toString() }, { onConflict: 'key' });
+                if (heroErr) throw heroErr;
 
-              // Simpan perubahan ke inventory
-              const { error: invErr } = await supabaseClient.from('inventory').upsert({
-                article_sku: sku,
-                ukuran: sz.size,
-                qty: sz.qty,
-                tren: trenSimbol,
-                created_at: new Date() // Menggunakan kolom 'created_at' yang ada di tabel Anda
-              }, { onConflict: 'article_sku,ukuran' });
-              
-              if (invErr) throw invErr;
+                // Update buffer_vendor
+                const { error: vendorErr } = await supabaseClient
+                    .from('global_settings')
+                    .upsert({ key: 'buffer_vendor', value: payloadData.vendorBuffer.toString() }, { onConflict: 'key' });
+                if (vendorErr) throw vendorErr;
 
-              // Catat riwayat ke stock_logs
-              if (selisih !== 0) {
-                await supabaseClient.from('stock_logs').insert({
-                  article_sku: sku,
-                  ukuran: sz.size,
-                  old_qty: oldQty,
-                  new_qty: sz.qty,
-                  perubahan: (selisih > 0 ? "+" : "") + selisih,
-                  timestamp: new Date().toLocaleString('id-ID')
-                });
-              }
+                return "Pengaturan buffer berhasil diperbarui di cloud Supabase!";
             }
-          }
-          return "Data artikel dan alokasi matriks ukuran berhasil disimpan di Supabase!";
-        }
 
-        // =========================================================
-        // 3. SIMPAN PENGATURAN BUFFER HARI
-        // =========================================================
-        else if (actionName === "saveBufferSettings") {
-          await supabaseClient.from('global_settings').upsert({ setting_name: 'buffer_hero', setting_value: payloadData.heroBuffer.toString() }, { onConflict: 'setting_name' });
-          await supabaseClient.from('global_settings').upsert({ setting_name: 'buffer_vendor', setting_value: payloadData.vendorBuffer.toString() }, { onConflict: 'setting_name' });
-          return "Pengaturan batas buffer hari berhasil diperbarui!";
+            // ==========================================
+            // AKSI 3: SIMPAN ATAU UPDATE ARTIKEL & STOK
+            // ==========================================
+            if (actionName === "saveOrUpdateSingleArticle") {
+                const { kategori, sku, nama, warna, status, adsGlobal, sizesData, isArtikelBaru } = payloadData;
+
+                // A. Upsert ke tabel 'articles'
+                const { error: artErr } = await supabaseClient.from('articles').upsert({
+                    sku: sku,
+                    name: isArtikelBaru ? nama : undefined,
+                    kategori: kategori, // Menggunakan nama kategori (Teks) langsung
+                    color: isArtikelBaru ? warna : undefined,
+                    status_tipe: status, // Menyimpan "Real Stock" / "Fake Stock" ke kolom baru
+                    ads: adsGlobal, // Mengisi kolom ads bawaan Supabase
+                    is_active: true
+                }, { onConflict: 'sku' });
+
+                if (artErr) throw artErr;
+
+                // B. Loop data ukuran untuk update ke tabel 'inventory' & catat ke 'stock_logs'
+                for (let sz of sizesData) {
+                    if (sz.isChanged || isArtikelBaru) {
+                        // 1. Ambil qty lama untuk keperluan logging history
+                        const { data: oldInv, error: readInvErr } = await supabaseClient
+                            .from('inventory')
+                            .select('qty')
+                            .eq('article_sku', sku)
+                            .eq('ukuran', sz.size)
+                            .maybeSingle();
+                        
+                        if (readInvErr) throw readInvErr;
+                        
+                        let oldQty = oldInv ? oldInv.qty : 0;
+                        let selisih = sz.qty - oldQty;
+                        let trenSimbol = selisih > 0 ? "▲" : (selisih < 0 ? "▼" : "-");
+
+                        // 2. Simpan kuantitas baru ke tabel 'inventory'
+                        const { error: invErr } = await supabaseClient.from('inventory').upsert({
+                            article_sku: sku,
+                            ukuran: sz.size,
+                            qty: sz.qty,
+                            tren: trenSimbol,
+                            created_at: new Date()
+                        }, { onConflict: 'article_sku,ukuran' });
+
+                        if (invErr) throw invErr;
+
+                        // 3. Catat riwayat log perubahan jika ada selisih angka stok
+                        if (selisih !== 0) {
+                            const { error: logErr } = await supabaseClient.from('stock_logs').insert({
+                                article_sku: sku,
+                                ukuran: sz.size,
+                                old_qty: oldQty,
+                                new_qty: sz.qty,
+                                perubahan: (selisih > 0 ? "+" : "") + selisih,
+                                created_at: new Date() // Sesuai dengan kolom default waktu di Supabase Anda
+                            });
+                            
+                            if (logErr) throw logErr;
+                        }
+                    }
+                }
+
+                return isArtikelBaru ? "Artikel baru dan alokasi stok berhasil ditambahkan!" : "Perubahan data stok artikel berhasil diperbarui!";
+            }
+
+        } catch (err) {
+            console.error("Supabase Operation Error:", err);
+            throw new Error(err.message || "Gagal beroperasi dengan database cloud.");
         }
+    }
 
         // =========================================================
         // 4. MENGUBAH STATUS PRIORITAS VENDOR
