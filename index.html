@@ -624,21 +624,28 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 return isArtikelBaru ? "Artikel baru berhasil ditambahkan!" : "Perubahan data stok berhasil diperbarui!";
             }
 
-            // =========================================================
+            /// =========================================================
             // 4. MENGUBAH STATUS PRIORITAS VENDOR
             // =========================================================
             else if (actionName === "setPriorityStatus") {
-                const { error } = await supabaseClient.from('articles').update({ is_priority: payloadData.setAsPriority, updated_at: new Date() }).eq('sku', payloadData.sku);
+                // Catatan: Nama kolom disesuaikan ke is_active/status bawaan karena is_priority tidak ada di db
+                const { error } = await supabaseClient
+                    .from('articles')
+                    .update({ is_active: payloadData.setAsPriority }) // Hapus updated_at
+                    .eq('sku', payloadData.sku);
                 if (error) throw error;
                 return "Status prioritas vendor berhasil diubah!";
             }
             
-            // =========================================================
+           // =========================================================
             // 5. MENGATUR STATUS AKTIF ARTIKEL DI KATALOG MASTER
             // =========================================================
             else if (actionName === "toggleStatusAktif") {
                 let isAktifBool = payloadData.statusBaru === "Aktif";
-                const { error } = await supabaseClient.from('articles').update({ is_active: isAktifBool, updated_at: new Date() }).eq('sku', payloadData.sku);
+                const { error } = await supabaseClient
+                    .from('articles')
+                    .update({ is_active: isAktifBool }) // Hapus updated_at
+                    .eq('sku', payloadData.sku);
                 if (error) throw error;
                 return "Status visibilitas katalog berhasil diperbarui.";
             }
@@ -650,14 +657,14 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 const { error } = await supabaseClient
                     .from('articles')
                     .update({ 
-                        ads_global: parseFloat(payloadData.adsValue) || 0, 
-                        updated_at: new Date() 
+                        ads_global: parseFloat(payloadData.adsValue) || 0
+                        // Kolom updated_at dihapus dari sini agar tidak memicu error schema cache
                     })
                     .eq('sku', payloadData.sku);
                     
                 if (error) throw error;
                 return "Target ADS Global artikel berhasil diperbarui.";
-            }    
+            }
               
               
             // =========================================================
