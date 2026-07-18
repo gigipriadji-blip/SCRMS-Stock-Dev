@@ -566,15 +566,13 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 var finalNama = nama || document.getElementById('comboInputArtikel').value.split(' [')[0];
                 var finalWarna = warna;
                 
-                let currentIsActive = true; // Default aktif normal
+               let currentIsPriority = false;
                 if (!isArtikelBaru) {
-                    // Jika barang lama, cari detail dari globalData bawaan aplikasi
                     var matchGlobal = globalData.find(g => g.sku === sku);
                     if (matchGlobal) {
                         if (!finalNama || finalNama.includes("[ARTIKEL BARU]")) finalNama = matchGlobal.nama;
                         if (!finalWarna) finalWarna = matchGlobal.warna;
-                        // Ambil status aslinya (apakah dia prioritas atau aktif biasa) dari database lokal saat ini
-                        currentIsActive = matchGlobal.isPriority ?? true; 
+                        currentIsPriority = matchGlobal.isPriority ?? false; // Ambil status prioritas aslinya
                     }
                 }
 
@@ -585,8 +583,9 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                     color: finalWarna || "-", 
                     status_tipe: status, 
                     ads_global: parseFloat(adsGlobal) || 0, 
-                    is_active: currentIsActive
+                    is_priority: currentIsPriority // Amankan status prioritas agar tidak ter-reset saat simpan stok
                 }, { onConflict: 'sku' });
+              
                 if (artErr) throw artErr;
 
                 for (let sz of sizesData) {
@@ -628,14 +627,13 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 return isArtikelBaru ? "Artikel baru berhasil ditambahkan!" : "Perubahan data stok berhasil diperbarui!";
             }
 
-            /// =========================================================
+            // =========================================================
             // 4. MENGUBAH STATUS PRIORITAS VENDOR
             // =========================================================
             else if (actionName === "setPriorityStatus") {
-                // Catatan: Nama kolom disesuaikan ke is_active/status bawaan karena is_priority tidak ada di db
                 const { error } = await supabaseClient
                     .from('articles')
-                    .update({ is_active: payloadData.setAsPriority }) // Hapus updated_at
+                    .update({ is_priority: payloadData.setAsPriority }) // Mengarah ke kolom baru database
                     .eq('sku', payloadData.sku);
                 if (error) throw error;
                 return "Status prioritas vendor berhasil diubah!";
