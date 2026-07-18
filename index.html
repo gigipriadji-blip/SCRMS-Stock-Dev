@@ -745,7 +745,9 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                     let qtyTotalExcel = parseInt(row[4]) || 0;
 
                     if(!sku || !nama || !kategori) continue;
-                    await supabaseClient.from('articles').upsert({
+                    
+                    // 1. Amankan data utama ke tabel articles (Menggunakan kolom ads_global)
+                    const { error: artErr } = await supabaseClient.from('articles').upsert({
                         sku: sku, 
                         name: nama, 
                         kategori: kategori, 
@@ -753,28 +755,35 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                         status_tipe: "Real Stock", 
                         ads_global: 0, 
                         is_active: true, 
-                        updated_at: new Date()
+                        created_at: new Date()
                     }, { onConflict: 'sku' });
                     
+                    // Jika data artikel gagal masuk karena kendala validasi, lewati baris ini
+                    if (artErr) {
+                        console.error(`Gagal mengimpor artikel SKU ${sku}:`, artErr);
+                        continue;
+                    }
+                    
+                    // 2. Alokasikan ukuran default berdasarkan jenis kategori produk
                     let defaultSizes = ["S", "M", "L", "XL", "XXL"];
                     if (kategori === "BAG" || kategori === "BAGS") defaultSizes = ["ALL SIZE"];
                     else if (["PANTS", "SWEAT PANTS", "SWEATPANTS"].includes(kategori)) defaultSizes = ["28", "30", "32", "34"];
                     
                     for(let i=0; i<defaultSizes.length; i++) {
                         let targetQty = i === 0 ? qtyTotalExcel : 0; 
+                        
+                        // Daftarkan ke tabel inventory (Menggunakan kolom created_at yang valid)
                         await supabaseClient.from('inventory').upsert({
-                            article_sku: sku, ukuran: defaultSizes[i], qty: targetQty, tren: "-", created_at: new Date()
+                            article_sku: sku, 
+                            ukuran: defaultSizes[i], 
+                            qty: targetQty, 
+                            tren: "-", 
+                            created_at: new Date()
                         }, { onConflict: 'article_sku,ukuran' });
                     }
                 }
                 return "Proses bulk import data dari Excel berhasil dipetakan ke Supabase!";
             }
-
-        } catch (error) {
-            console.error("Supabase Operation Error:", error);
-            throw new Error(error.message || "Gagal mengeksekusi perintah database.");
-        }
-    }
 
     // =================================================================
     // STATE VARIABEL APLIKASI
