@@ -731,17 +731,18 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 return true;
             }
 
-            // =========================================================
-            // 9. BULK IMPORT MASTER DATA DARI DATA EXCEL (HORIZONTAL)
+           // =========================================================
+            // 9. BULK IMPORT MASTER DATA DARI DATA EXCEL (HORIZONTAL - FIXED MATCH)
             // =========================================================
             else if (actionName === "importBulkData") {
                 const rows = payloadData.dataArray;
                 for (let row of rows) {
-                    if (row.length < 5) continue;
+                    if (row.length < 6) continue;
                     let kategori = row[0] ? row[0].toString().toUpperCase().trim() : "";
                     let sku = row[1] ? row[1].toString().trim() : "";
                     let namaArtikel = row[2] ? row[2].toString().trim() : "";
-                    let warna = row[3] ? row[3].toString().trim() : "-";
+                    let tipeTayang = row[3] ? row[3].toString().trim() : "Real Stock"; // Membaca Fake/Real dari kolom TAYANG
+                    let warna = row[4] ? row[4].toString().trim() : "-"; // Warna asli berada di kolom ke-5 (Index 4)
 
                     if(!sku || !namaArtikel || !kategori) continue;
                     
@@ -751,7 +752,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                         name: namaArtikel, 
                         kategori: kategori, 
                         color: warna, 
-                        status_tipe: "Real Stock", 
+                        status_tipe: tipeTayang, 
                         ads_global: 0, 
                         is_active: true, 
                         created_at: new Date()
@@ -762,28 +763,28 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                         continue;
                     }
                     
-                    // 2. Tentukan mapping ukuran dan posisi kolom Excel secara Horizontal
-                    let sizeMapping = []; // berisi objek { namaSize: string, qty: number }
+                    // 2. Tentukan mapping ukuran dan posisi kolom Excel secara Horizontal (Geser Mulai Index 5)
+                    let sizeMapping = [];
                     
                     if (kategori === "BAG" || kategori === "BAGS") {
-                        // Kategori BAGS biasanya hanya punya 1 kolom total stok di kolom ke-5 (Index 4)
-                        let qtyAllSize = parseInt(row[4]) || 0;
+                        // Kategori BAGS: nilai stok berada di kolom ke-6 (Index 5)
+                        let qtyAllSize = parseInt(row[5]) || 0;
                         sizeMapping.push({ size: "ALL SIZE", qty: qtyAllSize });
                     } 
                     else if (["PANTS", "SWEAT PANTS", "SWEATPANTS"].includes(kategori)) {
-                        // Kategori PANTS: 28 (Index 4), 30 (Index 5), 32 (Index 6), 34 (Index 7)
-                        sizeMapping.push({ size: "28", qty: parseInt(row[4]) || 0 });
-                        sizeMapping.push({ size: "30", qty: parseInt(row[5]) || 0 });
-                        sizeMapping.push({ size: "32", qty: parseInt(row[6]) || 0 });
-                        sizeMapping.push({ size: "34", qty: parseInt(row[7]) || 0 });
+                        // Kategori PANTS: 28(5), 30(6), 32(7), 34(8)
+                        sizeMapping.push({ size: "28", qty: parseInt(row[5]) || 0 });
+                        sizeMapping.push({ size: "30", qty: parseInt(row[6]) || 0 });
+                        sizeMapping.push({ size: "32", qty: parseInt(row[7]) || 0 });
+                        sizeMapping.push({ size: "34", qty: parseInt(row[8]) || 0 });
                     } 
                     else {
-                        // Kategori Umum (POLO, SHIRT, JACKET, dll): S(4), M(5), L(6), XL(7), XXL(8)
-                        sizeMapping.push({ size: "S", qty: parseInt(row[4]) || 0 });
-                        sizeMapping.push({ size: "M", qty: parseInt(row[5]) || 0 });
-                        sizeMapping.push({ size: "L", qty: parseInt(row[6]) || 0 });
-                        sizeMapping.push({ size: "XL", qty: parseInt(row[7]) || 0 });
-                        sizeMapping.push({ size: "XXL", qty: parseInt(row[8]) || 0 });
+                        // Kategori Umum (POLO, JACKET, dll): S(5), M(6), L(7), XL(8), XXL(9)
+                        sizeMapping.push({ size: "S", qty: parseInt(row[5]) || 0 });
+                        sizeMapping.push({ size: "M", qty: parseInt(row[6]) || 0 });
+                        sizeMapping.push({ size: "L", qty: parseInt(row[7]) || 0 });
+                        sizeMapping.push({ size: "XL", qty: parseInt(row[8]) || 0 });
+                        sizeMapping.push({ size: "XXL", qty: parseInt(row[9]) || 0 });
                     }
                     
                     // 3. Eksekusi penyimpanan kuantitas riil ke tabel inventory
