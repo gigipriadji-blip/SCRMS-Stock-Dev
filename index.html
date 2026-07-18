@@ -1085,7 +1085,14 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
         }
         var tableRows = "";
         logs.forEach(log => {
-          tableRows += `<tr><td class="small font-monospace text-start">${log.timestamp}</td><td>${log.size}</td><td>${log.oldQty} → ${log.newQty}</td><td class="fw-bold ${log.perubahan.includes('+')?'text-success':'text-danger'}">${log.perubahan}</td></tr>`;
+          let tglLokal = log.created_at ? new Date(log.created_at).toLocaleString('id-ID') : "-";
+          
+          tableRows += `<tr>
+            <td class="small font-monospace text-start">${tglLokal}</td>
+            <td>${log.ukuran || "-"}</td>
+            <td>${log.old_qty ?? 0} → ${log.new_qty ?? 0}</td>
+            <td class="fw-bold ${log.perubahan.includes('+')?'text-success':'text-danger'}">${log.perubahan}</td>
+          </tr>`;
         });
         Swal.fire({
           title: `<span>Log Pergerakan: <strong>${namaArtikel}</strong></span>`,
