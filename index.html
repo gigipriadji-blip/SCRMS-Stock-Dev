@@ -455,17 +455,7 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Membuat client Supabase dengan nama variabel baru agar tidak bentrok
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
-    
-    // =================================================================
-    // CONFIG BACKEND API & DRIVER KOMUNIKASI SUPABASE
-    // =================================================================
-    
-    const SUPABASE_URL = 'URL_SUPABASE_ANDA';
-    const SUPABASE_ANON_KEY = 'ANON_KEY_ANDA';
-    
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // KITA TETAP GUNAKAN NAMA FUNGSI 'callBackend' AGAR KODE BAWAAN TIDAK ERROR
    // KITA TETAP GUNAKAN NAMA FUNGSI 'callBackend' AGAR KODE BAWAAN TIDAK ERROR
     async function callBackend(actionName, payloadData = {}) {
         console.log("Menjalankan perintah ke Supabase:", actionName, payloadData);
