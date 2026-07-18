@@ -633,7 +633,11 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
                 return isArtikelBaru ? "Artikel baru berhasil ditambahkan!" : "Perubahan data stok berhasil diperbarui!";
             }
-
+      } catch (error) {
+            console.error("Supabase Operation Error:", error);
+            throw new Error(error.message || "Gagal mengeksekusi perintah database.");
+        }
+    } // <-- Menutup fungsi utama callBackend(actionName, payloadData)
             // =========================================================
             // 4. MENGUBAH STATUS PRIORITAS VENDOR
             // =========================================================
