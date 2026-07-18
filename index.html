@@ -740,16 +740,16 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                     if (row.length < 5) continue;
                     let kategori = row[0] ? row[0].toString().toUpperCase().trim() : "";
                     let sku = row[1] ? row[1].toString().trim() : "";
-                    let nama = row[2] ? row[2].toString().trim() : "";
+                    let namaArtikel = row[2] ? row[2].toString().trim() : "";
                     let warna = row[3] ? row[3].toString().trim() : "-";
                     let qtyTotalExcel = parseInt(row[4]) || 0;
 
-                    if(!sku || !nama || !kategori) continue;
+                    if(!sku || !namaArtikel || !kategori) continue;
                     
-                    // 1. Amankan data utama ke tabel articles (Menggunakan kolom ads_global)
+                    // 1. Amankan data utama ke tabel articles
                     const { error: artErr } = await supabaseClient.from('articles').upsert({
                         sku: sku, 
-                        name: nama, 
+                        name: namaArtikel, 
                         kategori: kategori, 
                         color: warna, 
                         status_tipe: "Real Stock", 
@@ -758,13 +758,12 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                         created_at: new Date()
                     }, { onConflict: 'sku' });
                     
-                    // Jika data artikel gagal masuk karena kendala validasi, lewati baris ini
                     if (artErr) {
-                        console.error(`Gagal mengimpor artikel SKU ${sku}:`, artErr);
+                        console.error("Gagal mengimpor ke tabel articles:", artErr);
                         continue;
                     }
                     
-                    // 2. Alokasikan ukuran default berdasarkan jenis kategori produk
+                    // 2. Alokasikan ukuran default
                     let defaultSizes = ["S", "M", "L", "XL", "XXL"];
                     if (kategori === "BAG" || kategori === "BAGS") defaultSizes = ["ALL SIZE"];
                     else if (["PANTS", "SWEAT PANTS", "SWEATPANTS"].includes(kategori)) defaultSizes = ["28", "30", "32", "34"];
@@ -772,7 +771,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                     for(let i=0; i<defaultSizes.length; i++) {
                         let targetQty = i === 0 ? qtyTotalExcel : 0; 
                         
-                        // Daftarkan ke tabel inventory (Menggunakan kolom created_at yang valid)
                         await supabaseClient.from('inventory').upsert({
                             article_sku: sku, 
                             ukuran: defaultSizes[i], 
