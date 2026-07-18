@@ -1105,13 +1105,21 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
         });
 
         logs.forEach(log => {
+          let tglLokal = log.created_at ? new Date(log.created_at).toLocaleString('id-ID') : "-";
+          
+          tableRows += `<tr>
+            <td class="small font-monospace text-start">${tglLokal}</td>
+            <td>${log.ukuran || "-"}</td>
+            <td>${log.old_qty ?? 0} → ${log.new_qty ?? 0}</td>
+            <td class="fw-bold ${log.perubahan.includes('+')?'text-success':'text-danger'}">${log.perubahan}</td>
+          </tr>`;
+        });
+
         Swal.fire({
           title: `<span>Log Pergerakan: <strong>${namaArtikel}</strong></span>`,
           html: `<div class="table-responsive" style="max-height: 300px;"><table class="table table-sm table-bordered text-center mb-0"><thead><tr><th>Waktu</th><th>Sz</th><th>Alur</th><th>Perubahan</th></tr></thead><tbody>${tableRows}</tbody></table></div>`,
           width: '750px', confirmButtonText: 'Tutup'
         });
-      } catch(err) { Swal.fire("Gagal", err.message, "error"); }
-    }
     function exportVendorToExcel() {
       var wsData = [["KATALOG VENDOR DISPLAY - SCREAMOUS"],["KATEGORI:", activeCategory],["TANGGAL:", new Date().toLocaleDateString('id-ID')],[],["SKU", "NAMA ARTIKEL", "TIPE STOK", "WARNA", "STATUS PRIORITAS"]];
       var grouped = {}; globalData.forEach(function(item) {
