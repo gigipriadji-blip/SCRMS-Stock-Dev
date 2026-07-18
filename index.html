@@ -642,7 +642,24 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 if (error) throw error;
                 return "Status visibilitas katalog berhasil diperbarui.";
             }
-
+        
+            // =========================================================
+            // TAMBAHAN: MENGATUR ADS GLOBAL UNTUK HERO ALERT
+            // =========================================================
+            else if (actionName === "setHeroADS") {
+                const { error } = await supabaseClient
+                    .from('articles')
+                    .update({ 
+                        ads_global: parseFloat(payloadData.adsValue) || 0, 
+                        updated_at: new Date() 
+                    })
+                    .eq('sku', payloadData.sku);
+                    
+                if (error) throw error;
+                return "Target ADS Global artikel berhasil diperbarui.";
+            }    
+              
+              
             // =========================================================
             // 6. AMBIL LOG RIWAYAT 5 HARI TERAKHIR PER ARTIKEL
             // =========================================================
