@@ -566,55 +566,30 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             else if (actionName === "saveOrUpdateSingleArticle") {
                 const { kategori, sku, nama, warna, status, adsGlobal, sizesData, isArtikelBaru } = payloadData;
 
+                // Ambil data nama dan warna yang sudah ada dari form atau cari dari input
+                var finalNama = nama || document.getElementById('comboInputArtikel').value.split(' [')[0];
+                var finalWarna = warna;
+                
+                if (!isArtikelBaru) {
+                    // Jika barang lama, cari detail warna dari globalData bawaan aplikasi
+                    var matchGlobal = globalData.find(g => g.sku === sku);
+                    if (matchGlobal) {
+                        if (!finalNama || finalNama.includes("[ARTIKEL BARU]")) finalNama = matchGlobal.nama;
+                        if (!finalWarna) finalWarna = matchGlobal.warna;
+                    }
+                }
+
                 const { error: artErr } = await supabaseClient.from('articles').upsert({
                     sku: sku,
-                    name: isArtikelBaru ? nama : undefined,
+                    name: finalNama, // Selalu kirim nama asli agar tidak memicu not-null constraint
                     kategori: kategori, 
-                    color: isArtikelBaru ? warna : undefined,
+                    color: finalWarna || "-", // Selalu isi warna standar agar database aman
                     status_tipe: status, 
-                    // PASTIKAN TERTULIS 'ads_global' BUKAN 'ads'
                     ads_global: parseFloat(adsGlobal) || 0, 
                     is_active: true
                 }, { onConflict: 'sku' });
 
                 if (artErr) throw artErr;
-
-                for (let sz of sizesData) {
-                    if (sz.isChanged || isArtikelBaru) {
-                        const { data: oldInv, error: readInvErr } = await supabaseClient
-                            .from('inventory')
-                            .select('qty')
-                            .eq('article_sku', sku)
-                            .eq('ukuran', sz.size)
-                            .maybeSingle();
-                        
-                        if (readInvErr) throw readInvErr;
-                        
-                        let oldQty = oldInv ? oldInv.qty : 0;
-                        let selisih = sz.qty - oldQty;
-                        let trenSimbol = selisih > 0 ? "▲" : (selisih < 0 ? "▼" : "-");
-
-                        const { error: invErr } = await supabaseClient.from('inventory').upsert({
-                            article_sku: sku,
-                            ukuran: sz.size,
-                            qty: sz.qty,
-                            tren: trenSimbol,
-                            created_at: new Date()
-                        }, { onConflict: 'article_sku,ukuran' });
-
-                        if (invErr) throw invErr;
-
-                        if (selisih !== 0) {
-                            const { error: logErr } = await supabaseClient.from('stock_logs').insert({
-                                article_sku: sku,
-                                ukuran: sz.size,
-                                old_qty: oldQty,
-                                new_qty: sz.qty,
-                                perubahan: (selisih > 0 ? "+" : "") + selisih,
-                                created_at: new Date()
-                            });
-                            
-                            if (logErr) throw logErr;
                         }
                     }
                 }
