@@ -1084,6 +1084,14 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
           Swal.fire({ title: 'Riwayat Stok', html: `<div class="text-muted py-3">Belum ada riwayat pergerakan stok untuk artikel <strong>${namaArtikel}</strong>.</div>` }); return;
         }
         var tableRows = "";
+        
+        var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
+        logs.sort((a, b) => {
+            var idxA = urutanBaku.indexOf((a.ukuran || "").toUpperCase());
+            var idxB = urutanBaku.indexOf((b.ukuran || "").toUpperCase());
+            return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+        });
+
         logs.forEach(log => {
           let tglLokal = log.created_at ? new Date(log.created_at).toLocaleString('id-ID') : "-";
           
