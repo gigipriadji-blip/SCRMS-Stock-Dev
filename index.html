@@ -713,31 +713,41 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 return "Akun akses rekanan vendor berhasil dihapus permanen.";
             }
 
-            // =========================================================
-            // 8. MONITOR BATCH KOTRETAN VENDOR (KOTRETAN DB)
+           // =========================================================
+            // ACTION: LOAD & SAVE KOTRETAN VENDOR (JSONB STRUCTURE)
             // =========================================================
             else if (actionName === "loadSavedKotretanDb") {
                 const { data, error } = await supabaseClient.from('vendor_drafts').select('*');
                 if (error) throw error;
-                let map = {};
-                data.forEach(row => {
-                    if(!map[row.vendor_username]) map[row.vendor_username] = [];
-                    map[row.vendor_username].push(row.article_sku);
-                });
-                return map;
-            }
-            else if (actionName === "clearVendorKotretanDb") {
-                const { error } = await supabaseClient.from('vendor_drafts').delete().eq('vendor_username', payloadData.vendorUser);
-                if (error) throw error;
-                return true;
+                
+                // Mengubah format array dari Supabase menjadi object map yang dipahami UI depan
+                let mapResult = {};
+                if (data && data.length > 0) {
+                    data.forEach(row => {
+                        // row.vendor_id bertindak sebagai username vendor
+                        if (row.vendor_id) {
+                            mapResult[row.vendor_id] = row.draft_data || [];
+                        }
+                    });
+                }
+                return mapResult;
             }
             else if (actionName === "saveArticleToKotretanDb") {
+                // payloadData berisi { vendorUsername: "...", listArticles: [...] }
+                const { vendorUsername, listArticles } = payloadData;
+                
+                // Bersihkan dulu data lama untuk vendor tersebut sebelum ditimpa yang baru
+                await supabaseClient.from('vendor_drafts').delete().eq('vendor_id', vendorUsername);
+                
+                // Simpan data draf baru ke dalam format JSONB
                 const { error } = await supabaseClient.from('vendor_drafts').insert({
-                    vendor_username: payloadData.vendorUser,
-                    article_sku: payloadData.sku
+                    vendor_id: vendorUsername,
+                    draft_data: listArticles,
+                    updated_at: new Date().toISOString()
                 });
+                
                 if (error) throw error;
-                return true;
+                return "Kotretan draf vendor berhasil diamankan ke Cloud!";
             }
 
            // =========================================================
