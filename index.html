@@ -1,42 +1,6 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <script>
-    (function() {
-      // 1. Ambil parameter kunci rahasia dari URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const accessKey = urlParams.get('pass'); 
-
-      // 2. Kunci Otorisasi Otoritas Admin SCREAMOUS
-      const KUNCI_RAHASIA_ADMIN = "adminscrms"; 
-
-      // 3. Hadang jika masuk tanpa parameter ?pass=adminscrms
-      if (accessKey !== KUNCI_RAHASIA_ADMIN) {
-        // Ganti total isi dokumen dengan layar pemblokiran 403
-        document.documentElement.innerHTML = `
-          <html lang="id">
-          <head>
-            <meta charset="UTF-8">
-            <title>403 - Akses Ditolak</title>
-            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-          </head>
-          <body class="bg-dark text-white d-flex align-items-center justify-content-center" style="height: 100vh; font-family: sans-serif;">
-            <div class="text-center p-5 border border-secondary rounded bg-secondary-subtle text-dark shadow-lg" style="max-width: 500px;">
-              <i class="fa-solid fa-circle-xmark text-danger fa-4x mb-3"></i>
-              <h1 class="display-6 fw-bold text-danger mb-2">403 - Access Denied</h1>
-              <p class="lead fs-6 text-muted mb-4">Maaf, Anda tidak memiliki otoritas akses untuk membuka dashboard internal ini.</p>
-              <hr class="my-3">
-              <small class="text-muted d-block">SCREAMOUS Stock Management System Platform</small>
-            </div>
-          </body>
-          </html>
-        `;
-        // Hentikan proses loading browser seketika agar skrip di bawahnya tidak bocor/jalan
-        window.stop(); 
-        throw new Error("Akses diblokir: Kunci otorisasi Admin tidak valid.");
-      }
-    })();
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <meta charset="UTF-8">
