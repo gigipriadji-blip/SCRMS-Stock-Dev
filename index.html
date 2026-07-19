@@ -936,12 +936,30 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
         
         if(APP_ROLE_MODE === "vendor" && TARGET_VENDOR_USER !== "") {
           const vendorList = await callBackend("readVendorData");
-          var match = vendorList.find(v => v.username === TARGET_VENDOR_USER);
+          
+          // =======================================================
+          // PERBAIKAN: Pencarian kebal huruf kapital & spasi siluman
+          // =======================================================
+          var match = vendorList.find(v => {
+            const dbUser = v.username ? String(v.username).toLowerCase().trim() : '';
+            const targetUser = TARGET_VENDOR_USER ? String(TARGET_VENDOR_USER).toLowerCase().trim() : '';
+            return dbUser === targetUser;
+          });
+
           if(match) {
             var txtWelcome = document.getElementById('txtNamaVendorWelcome');
             if(txtWelcome) txtWelcome.innerText = match.nama.toUpperCase();
 
-            listKategoriGlobal = match.akses.map(k => k.trim()).sort();
+            // Antisipasi format array/string dari database agar map() tidak error
+            var dataAkses = match.akses || [];
+            if (typeof dataAkses === 'string') {
+              listKategoriGlobal = dataAkses.split(',').map(k => k.trim()).sort();
+            } else if (Array.isArray(dataAkses)) {
+              listKategoriGlobal = dataAkses.map(k => String(k).trim()).sort();
+            } else {
+              listKategoriGlobal = [];
+            }
+
             globalData = globalData.filter(item => listKategoriGlobal.includes(item.kategori));
 
             var prioToggle = document.getElementById('filterPrioOnly'); if(prioToggle) prioToggle.checked = false;
