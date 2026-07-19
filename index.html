@@ -733,15 +733,28 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 return mapResult;
             }
             else if (actionName === "saveArticleToKotretanDb") {
-                // payloadData berisi { vendorUsername: "...", listArticles: [...] }
+                // payloadData berisi { vendorUsername: "dkk", listArticles: [...] }
                 const { vendorUsername, listArticles } = payloadData;
                 
-                // Bersihkan dulu data lama untuk vendor tersebut sebelum ditimpa yang baru
-                await supabaseClient.from('vendor_drafts').delete().eq('vendor_id', vendorUsername);
+                // 1. Cari dulu data asli vendor ini di tabel 'vendors' untuk mendapatkan ID Angkanya
+                const { data: vendorMatch, error: vendorError } = await supabaseClient
+                    .from('vendors')
+                    .select('id')
+                    .eq('username', vendorUsername)
+                    .single();
                 
-                // Simpan data draf baru ke dalam format JSONB
+                if (vendorError || !vendorMatch) {
+                    throw new Error("Gagal mengidentifikasi ID Angka rekanan vendor.");
+                }
+                
+                const numericVendorId = vendorMatch.id; // Ini akan menghasilkan angka (contoh: 4)
+                
+                // 2. Bersihkan draf lama berdasarkan ID Angka tersebut
+                await supabaseClient.from('vendor_drafts').delete().eq('vendor_id', numericVendorId);
+                
+                // 3. Masukkan data draf baru menggunakan ID Angka (Integer) yang sah
                 const { error } = await supabaseClient.from('vendor_drafts').insert({
-                    vendor_id: vendorUsername,
+                    vendor_id: numericVendorId,
                     draft_data: listArticles,
                     updated_at: new Date().toISOString()
                 });
