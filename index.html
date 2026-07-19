@@ -1571,54 +1571,81 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
       } catch(e) { console.error("Dropdown monitor vendor bermasalah."); }
     }
     function aksiMonVendorBerubah() {
-      var selectVendor = document.getElementById('monVendor'); var selectKat = document.getElementById('monKategori');
-      var selectStatus = document.getElementById('monStatus'); var selectArt = document.getElementById('monArtikel');
-      var btnTambah = document.getElementById('btnTambahMon');
+      var selectVendor = document.getElementById('monVendor'); 
+      var selectKat = document.getElementById('monKategori');
+      var selectStatus = document.getElementById('monStatus'); 
       
-      selectKat.innerHTML = '<option value="">-- Pilih Kategori --</option>'; selectKat.disabled = true; selectStatus.disabled = true; selectStatus.value = "Semua";
-      selectArt.innerHTML = '<option value="">-- Pilih Artikel --</option>'; selectArt.disabled = true; btnTambah.disabled = true;
-      activeVendorUser = selectVendor.value; clearSearchTableInternal();
+      // Ambil ID tombol baru kita
+      var btnBukaModal = document.getElementById('btnBukaModalArtikel');
+      
+      selectKat.innerHTML = '<option value="">-- Pilih Kategori --</option>'; 
+      selectKat.disabled = true; 
+      selectStatus.disabled = true; 
+      selectStatus.value = "Semua";
+      
+      if (btnBukaModal) btnBukaModal.disabled = true; // Kunci tombol aksi di awal
+      
+      activeVendorUser = selectVendor.value; 
+      clearSearchTableInternal();
 
       if (activeVendorUser === "") {
         document.getElementById('labelActiveVendor').innerHTML = '<i class="fa-solid fa-info-circle me-1"></i>Workspace non-aktif.';
-        document.getElementById('viewFilterStatus').disabled = true; document.getElementById('searchTableText').disabled = true;
-        document.getElementById('btnResetKotretan').disabled = true; document.getElementById('btnSaveCloud').disabled = true;
-        document.getElementById('btnExportEx').disabled = true; document.getElementById('btnExportPdf').disabled = true;
-        document.getElementById('tbodyKotretan').innerHTML = `<tr><td colspan="11" class="text-muted py-5">Silakan pilih vendor untuk membuka area kotretan.</td></tr>`; return;
+        document.getElementById('viewFilterStatus').disabled = true; 
+        document.getElementById('searchTableText').disabled = true;
+        document.getElementById('btnResetKotretan').disabled = true; 
+        document.getElementById('btnSaveCloud').disabled = true;
+        document.getElementById('btnExportEx').disabled = true; 
+        document.getElementById('btnExportPdf').disabled = true;
+        document.getElementById('tbodyKotretan').innerHTML = `<tr><td colspan="11" class="text-muted py-5">Silakan pilih vendor untuk membuka area kotretan.</td></tr>`; 
+        return;
       }
       
       var selectedOpt = selectVendor.options[selectVendor.selectedIndex];
       activeVendorName = selectedOpt.getAttribute('data-nama');
       document.getElementById('labelActiveVendor').innerHTML = `Workspace Aktif: <strong class="text-dark">${activeVendorName}</strong>`;
-      document.getElementById('viewFilterStatus').disabled = false; document.getElementById('searchTableText').disabled = false;
-      document.getElementById('btnResetKotretan').disabled = false; document.getElementById('btnSaveCloud').disabled = false;
-      document.getElementById('btnExportEx').disabled = false; document.getElementById('btnExportPdf').disabled = false;
+      document.getElementById('viewFilterStatus').disabled = false; 
+      document.getElementById('searchTableText').disabled = false;
+      document.getElementById('btnResetKotretan').disabled = false; 
+      document.getElementById('btnSaveCloud').disabled = false;
+      document.getElementById('btnExportEx').disabled = false; 
+      document.getElementById('btnExportPdf').disabled = false;
 
       if (!globalKotretanDbMap[activeVendorUser]) globalKotretanDbMap[activeVendorUser] = [];
       var aksesStr = selectedOpt.getAttribute('data-akses');
       if (aksesStr && aksesStr.trim() !== "") {
-        monitorActiveAksesKategori = aksesStr.split(',').sort(); selectKat.disabled = false;
+        monitorActiveAksesKategori = aksesStr.split(',').sort(); 
+        selectKat.disabled = false;
         monitorActiveAksesKategori.forEach(cat => selectKat.insertAdjacentHTML('beforeend', `<option value="${cat}">${cat}</option>`));
       }
       renderTabelKotretan();
     }
+
     function aksiMonKategoriAtauStatusBerubah() {
-      var selectKat = document.getElementById('monKategori').value; var selectStatus = document.getElementById('monStatus').value;
-      var selectArt = document.getElementById('monArtikel'); var btn = document.getElementById('btnTambahMon');
-      selectArt.innerHTML = '<option value="">-- Pilih Artikel --</option>';
-      if (selectKat === "") { document.getElementById('monStatus').disabled = true; selectArt.disabled = true; btn.disabled = true; return; }
+      var selectKat = document.getElementById('monKategori').value; 
+      var selectStatus = document.getElementById('monStatus').value;
+      var btnBukaModal = document.getElementById('btnBukaModalArtikel');
+      
+      if (selectKat === "") { 
+        document.getElementById('monStatus').disabled = true; 
+        if (btnBukaModal) btnBukaModal.disabled = true; 
+        return; 
+      }
       document.getElementById('monStatus').disabled = false;
 
-      var uniqueArticles = {}; globalData.forEach(item => {
+      // Hitung apakah ada artikel yang tersedia di globalData sesuai filter
+      var adaArtikel = false; 
+      globalData.forEach(item => {
         if (item.isAktif === "Aktif" && item.kategori === selectKat && (selectStatus === "Semua" || item.status === selectStatus)) {
-          uniqueArticles[item.sku] = `${item.nama} [${item.sku}]`;
+          adaArtikel = true;
         }
       });
-      var keys = Object.keys(uniqueArticles).sort();
-      if (keys.length > 0) {
-        keys.forEach(sku => selectArt.insertAdjacentHTML('beforeend', `<option value="${sku}">${uniqueArticles[sku]}</option>`));
-        selectArt.disabled = false; btn.disabled = false;
-      } else { selectArt.innerHTML = '<option value="">(Tidak ada artikel cocok)</option>'; selectArt.disabled = true; btn.disabled = true; }
+      
+      // Jika ada artikel, buka gembok tombol "Pilih Banyak Artikel"
+      if (adaArtikel) {
+        if (btnBukaModal) btnBukaModal.disabled = false;
+      } else { 
+        if (btnBukaModal) btnBukaModal.disabled = true; 
+      }
     }
     function tambahkanKeKotretanLokal() {
       var skuTarget = document.getElementById('monArtikel').value; if(!skuTarget) return;
