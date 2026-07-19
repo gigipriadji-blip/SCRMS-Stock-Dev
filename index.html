@@ -1857,5 +1857,43 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
       Swal.fire('Berhasil', `Sukses memasukkan ${checkboxes.length} artikel ke workspace kotretan!`, 'success');
     }
   </script>
+       <div class="modal fade" id="modalPilihArtikel" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-dark text-white">
+        <h5 class="modal-title fw-bold"><i class="fa-solid fa-boxes-stacked me-2"></i> Pilih Artikel untuk Vendor</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body bg-light">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <small class="text-muted">Centang artikel yang ingin dimasukkan ke dalam tabel workspace.</small>
+          <button type="button" class="btn btn-xs btn-outline-secondary btn-sm" onclick="toggleSemuaCentang(this)">
+            <i class="fa-solid fa-check-double me-1"></i> Centang Semua
+          </button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover table-bordered bg-white align-middle text-center small">
+            <thead class="table-dark">
+              <tr>
+                <th style="width: 50px;">Pilih</th>
+                <th>Kategori</th>
+                <th>Nama Artikel</th>
+                <th>SKU</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyModalArtikel">
+              </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer bg-light border-top">
+        <button type="button" class="btn btn-secondary fw-bold" data-bs-dismiss="modal">Batal</button>
+        <button type="button" class="btn btn-success fw-bold shadow-sm" onclick="masukkanArtikelTercentangKeWorkspace()">
+          <i class="fa-solid fa-plus me-1"></i> Masukkan ke Workspace
+        </button>
+      </div>
+    </div>
+  </div>
+</div> 
 </body>
 </html>
