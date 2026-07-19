@@ -1573,20 +1573,39 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
     function kosongkanKotretanLokal() { globalKotretanDbMap[activeVendorUser] = []; clearSearchTableInternal(); renderTabelKotretan(); }
     
     function simpanBatchKotretanKeCloud() {
+      // 1. Ambil list SKU artikel yang ada di dalam kotretan saat ini
       var targetSkus = globalKotretanDbMap[activeVendorUser] || [];
-      Swal.fire({ title: 'Simpan ke Cloud?', text: `Menyimpan ${targetSkus.length} data untuk vendor ${activeVendorName}.`, icon: 'question', showCancelButton: true }).then(async (result) => {
+      
+      // Validasi: Pastikan admin sudah memilih vendor aktif
+      if (!activeVendorUser) {
+        Swal.fire('Gagal', 'Silakan pilih rekanan vendor terlebih dahulu.', 'error');
+        return;
+      }
+
+      Swal.fire({ 
+        title: 'Simpan ke Cloud?', 
+        text: `Menyimpan ${targetSkus.length} target artikel kotretan untuk vendor ${activeVendorName}.`, 
+        icon: 'question', 
+        showCancelButton: true 
+      }).then(async (result) => {
         if (result.isConfirmed) {
           Swal.fire({ title: 'Menyinkronkan Cloud Database...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+          
           try {
-            await callBackend("clearVendorKotretanDb", { vendorUser: activeVendorUser });
-            if (targetSkus.length === 0) { Swal.fire('Berhasil', 'Workspace berhasil dikosongkan di cloud!', 'success'); renderTabelKotretan(); return; }
+            // 2. Bungkus data sesuai parameter backend JSONB yang kita rancang sebelumnya
+            const payload = {
+              vendorUsername: activeVendorUser, // ini akan mengisi kolom vendor_id di database
+              listArticles: targetSkus          // ini akan mengisi kolom draft_data (JSONB)
+            };
             
-            for(let sku of targetSkus) {
-              await callBackend("saveArticleToKotretanDb", { vendorUser: activeVendorUser, sku: sku });
-            }
-            Swal.fire('Sukses Tersimpan!', `Berhasil mengamankan target ${targetSkus.length} artikel ke Google Sheets!`, 'success');
+            // 3. Tembak langsung ke backend saveArticleToKotretanDb (proses delete & insert dikerjakan di backend)
+            const res = await callBackend("saveArticleToKotretanDb", payload);
+            
+            Swal.fire('Sukses Tersimpan!', res, 'success');
             renderTabelKotretan();
-          } catch(err) { Swal.fire("Gagal Komunikasi", err.message, "error"); }
+          } catch(err) { 
+            Swal.fire("Gagal Komunikasi", err.message, "error"); 
+          }
         }
       });
     }
