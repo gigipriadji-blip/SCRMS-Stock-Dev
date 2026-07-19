@@ -602,30 +602,39 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 var finalNama = nama || document.getElementById('comboInputArtikel').value.split(' [')[0];
                 var finalWarna = warna;
                 
-               let currentIsActive = true;
-               let currentIsPriority = false; // <-- Tambahkan baris ini sebagai default
+                let currentIsActive = true;
+                let currentIsPriority = false;
 
-             if (!isArtikelBaru) {
-             var matchGlobal = localArticlesList.find(g => g.sku === sku);
-             if (matchGlobal) {
-             if (!finalNama || finalNama.includes("[ARTIKEL BARU]")) finalNama = matchGlobal.nama;
-             if (!finalWarna) finalWarna = matchGlobal.warna;
-              currentIsActive = matchGlobal.isAktif ?? true;
-              currentIsPriority = matchGlobal.isPriority ?? false; // <-- Tambahkan baris ini untuk ambil status prioritas asli dari lokal
-             }
-        }
+                // PROTEKSI BUG WARNA & DATA LAMA
+                if (!isArtikelBaru) {
+                    var matchGlobal = localArticlesList.find(g => g.sku === sku);
+                    if (matchGlobal) {
+                        if (!finalNama || finalNama.includes("[ARTIKEL BARU]")) finalNama = matchGlobal.nama;
+                        
+                        // Jika warna yang dikirim kosong, null, undefined, atau "-", kunci pakai warna asli di database
+                        if (!finalWarna || finalWarna === "-") {
+                            finalWarna = matchGlobal.warna || matchGlobal.color;
+                        }
+                        
+                        currentIsActive = matchGlobal.isAktif ?? true;
+                        currentIsPriority = matchGlobal.isPriority ?? false;
+                    }
+                }
+
+                // Jika benar-benar artikel baru dan tidak diisi warna, baru jadikan "-"
+                if (!finalWarna) finalWarna = "-";
 
                 const { error: artErr } = await supabaseClient.from('articles').upsert({
-                sku: sku,
-                name: finalNama,
-                kategori: kategori,
-                color: finalWarna || "-",
-                status_tipe: status,
-                ads_global: parseFloat(adsGlobal) || 0,
-                is_active: currentIsActive,    // <-- WAJIB TAMBAHKAN BARIS INI agar status Aktif tidak hilang
-                is_priority: currentIsPriority  // <-- Tetap pertahankan ini agar status Prioritas tidak lepas
-             }, { onConflict: 'sku' });
-              
+                    sku: sku,
+                    name: finalNama,
+                    kategori: kategori,
+                    color: finalWarna, // <-- Sekarang aman, tidak akan tertimpa strip lagi
+                    status_tipe: status,
+                    ads_global: parseFloat(adsGlobal) || 0,
+                    is_active: currentIsActive,
+                    is_priority: currentIsPriority
+                }, { onConflict: 'sku' });
+                
                 if (artErr) throw artErr;
 
                 for (let sz of sizesData) {
