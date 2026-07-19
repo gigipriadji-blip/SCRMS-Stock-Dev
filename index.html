@@ -505,8 +505,9 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                             warna: art.color,
                             status: art.status_tipe || "Fake Stock",
                             adsGlobal: parseFloat(art.ads_global) || 0,
-                            isAktif: "Aktif",
-                            isPriority: false,
+                            // UBAH 2 BARIS INI: Mengambil data real dari database
+                            isAktif: art.is_active ? "Aktif" : "Non-Aktif",
+                            isPriority: art.is_priority || false,
                             timestamp: art.created_at ? new Date(art.created_at).toLocaleString('id-ID') : "-",
                             size: "-",
                             qty: 0,
@@ -521,8 +522,9 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                                 warna: art.color,
                                 status: art.status_tipe || "Fake Stock",
                                 adsGlobal: parseFloat(art.ads_global) || 0,
-                                isAktif: "Aktif",
-                                isPriority: false, 
+                                // UBAH 2 BARIS INI JUGA: Mengambil data real dari database
+                                isAktif: art.is_active ? "Aktif" : "Non-Aktif",
+                                isPriority: art.is_priority || false, 
                                 timestamp: sz.created_at ? new Date(sz.created_at).toLocaleString('id-ID') : new Date(art.created_at).toLocaleString('id-ID'),
                                 size: sz.ukuran,
                                 qty: sz.qty,
