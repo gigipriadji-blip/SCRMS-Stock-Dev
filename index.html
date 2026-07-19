@@ -688,20 +688,21 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 return data;
             }
 
-            // =========================================================
+           // =========================================================
             // 7. MANAJEMEN AKUN VENDOR (READ, SAVE, UPDATE, DELETE)
             // =========================================================
             else if (actionName === "readVendorData") {
                 const { data, error } = await supabaseClient.from('vendors').select('*');
                 if (error) throw error;
-                return data.map(v => ({ nama: v.nama, username: v.username, akses: v.kategori_akses }));
+                // Mengubah v.nama jadi v.name, dan v.kategori_akses jadi v.akses sesuai database
+                return data.map(v => ({ nama: v.name, username: v.username, akses: v.akses || [] }));
             }
             else if (actionName === "saveNewVendor" || actionName === "updateVendorAccess") {
                 const { error } = await supabaseClient.from('vendors').upsert({
                     username: payloadData.username,
-                    nama: payloadData.nama,
-                    kategori_akses: payloadData.listKategori,
-                    updated_at: new Date()
+                    name: payloadData.nama, // Mengubah nama menjadi name agar sinkron ke database Supabase
+                    akses: payloadData.listKategori, // Mengubah kategori_akses menjadi akses agar sinkron
+                    is_active: true
                 }, { onConflict: 'username' });
                 if (error) throw error;
                 return "Data otorisasi kategori vendor berhasil diamankan!";
