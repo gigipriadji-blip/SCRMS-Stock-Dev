@@ -717,16 +717,26 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             // ACTION: LOAD & SAVE KOTRETAN VENDOR (JSONB STRUCTURE)
             // =========================================================
             else if (actionName === "loadSavedKotretanDb") {
-                const { data, error } = await supabaseClient.from('vendor_drafts').select('*');
+                // 1. Ambil data draf sekaligus join dengan tabel vendors untuk mendapatkan username-nya
+                const { data, error } = await supabaseClient
+                    .from('vendor_drafts')
+                    .select(`
+                        draft_data,
+                        vendors (
+                            username
+                        )
+                    `);
+                
                 if (error) throw error;
                 
-                // Mengubah format array dari Supabase menjadi object map yang dipahami UI depan
+                // 2. Petakan hasilnya ke dalam object map menggunakan text username sebagai key-nya
                 let mapResult = {};
                 if (data && data.length > 0) {
                     data.forEach(row => {
-                        // row.vendor_id bertindak sebagai username vendor
-                        if (row.vendor_id) {
-                            mapResult[row.vendor_id] = row.draft_data || [];
+                        // Memastikan vendor dan username-nya ada hasil dari relasi join
+                        if (row.vendors && row.vendors.username) {
+                            var vUser = row.vendors.username;
+                            mapResult[vUser] = row.draft_data || [];
                         }
                     });
                 }
