@@ -88,17 +88,34 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
   <script>
-    var API_URL = "https://script.google.com/macros/s/AKfycbySvZbT9jJ3ISeGh4bb7TdLE4W8aFR1Rbw199JOK0H6D_HWAG40lG-oIAuFKGuG1EtR0w/exec";
+   // =================================================================
+    // CONFIG DATABASE & ALIRAN DATA REAL-TIME SUPABASE
+    // =================================================================
+    // MEMUAT PUSTAKA SUPABASE SECARA DINAMIS JIKA BELUM ADA
+    if (typeof supabase === 'undefined') {
+      var script = document.createElement('script');
+      script.src = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2";
+      document.head.appendChild(script);
+    }
+
+    var supabaseClient;
+    function initSupabase() {
+      if (typeof supabase !== 'undefined' && !supabaseClient) {
+        const SUPABASE_URL = 'https://iiuwynlxqfupxklauied.supabase.co'; 
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlpdXd5bmx4cWZ1cHhrbGF1aWVkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyOTY1MTYsImV4cCI6MjA5OTg3MjUxNn0.k_ViDcTyv-0vqEYtPm8Gh2EeIY3U9_7q_i-qduToRiw'; 
+        supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      }
+    }
+
     var globalData = [];
     var listKategoriGlobal = []; 
     var activeCategory = ""; 
     var GLOBAL_VENDOR_BUFFER = 7;
 
-    // VALIDASI INTEGRITAS: WAJIB MEMILIKI USER PARAMETER
+    // VALIDASI INTEGRITAS: PARAMETER URL
     var urlParams = new URLSearchParams(window.location.search);
     var TARGET_VENDOR_USER = urlParams.get('user') || localStorage.getItem('scrms_last_vendor') || "";
 
-    // Simpan ke local storage agar saat aplikasi dibuka dari ikon PWA, ia tidak kehilangan data Vendor-nya!
     if(urlParams.get('user')) {
       localStorage.setItem('scrms_last_vendor', urlParams.get('user'));
     }
@@ -109,50 +126,77 @@
         document.getElementById('vendorWelcomeHeader').remove();
         return;
       }
-      loadDashboardData(); 
+      
+      var checkSupabase = setInterval(function() {
+        if (typeof supabase !== 'undefined') {
+          clearInterval(checkSupabase);
+          initSupabase();
+          loadDashboardData(); 
+        }
+      }, 100);
     });
-
-    async function callBackend(actionName, payloadData = {}) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-      try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          mode: "cors",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: actionName, payload: payloadData }),
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        const result = await response.json();
-        if (result.status === "success") return result.data;
-        throw new Error(result.message);
-      } catch (error) {
-        clearTimeout(timeoutId);
-        if (error.name === "AbortError") throw new Error("Jaringan sedang tidak stabil, silakan refresh halaman untuk memuat ulang data.");
-        throw error;
-      }
-    }
 
     async function loadDashboardData() {
       var artContainer = document.getElementById('articlesContainer');
       if(artContainer) artContainer.innerHTML = '<div class="text-center py-5 text-muted"><i class="fa-solid fa-spinner fa-spin fa-3x mb-3"></i>Menyusun data katalog...</div>';
       try {
-        const response = await callBackend("readData");
-        globalData = response.articles || [];
-        GLOBAL_VENDOR_BUFFER = (response.settings && response.settings.vendor) ? response.settings.vendor : 7;
+        if (!supabaseClient) initSupabase();
+
+        // 1. TARIK DATA ARTIKEL & INVENTORY LANGSUNG DARI SUPABASE
+        const { data: articlesData, error: artErr } = await supabaseClient.from('articles').select('*');
+        if (artErr) throw artErr;
+
+        const { data: invData, error: invErr } = await supabaseClient.from('inventory').select('*');
+        if (invErr) throw invErr;
+
+        try {
+          const { data: settingsData } = await supabaseClient.from('global_settings').select('*');
+          if (settingsData && settingsData.length > 0) {
+            const vendorRow = settingsData.find(r => r.key === 'buffer_vendor');
+            if (vendorRow) GLOBAL_VENDOR_BUFFER = parseFloat(vendorRow.value) || 7;
+          }
+        } catch(e) {
+          console.log("Menggunakan default buffer vendor: 7 hari");
+        }
+
+        let formattedArticles = [];
+        articlesData.forEach(art => {
+          const matchingSizes = invData.filter(i => i.article_sku === art.sku);
+          const baseData = {
+            sku: art.sku,
+            nama: art.name,
+            kategori: art.kategori,
+            warna: art.color,
+            status: art.status_tipe || "Fake Stock",
+            adsGlobal: parseFloat(art.ads_global) || 0,
+            isAktif: art.is_active ? "Aktif" : "Non-Aktif",
+            isPriority: art.is_priority || false,
+            timestamp: art.created_at ? new Date(art.created_at).toLocaleString('id-ID') : "-"
+          };
+
+          if (matchingSizes.length === 0) {
+            formattedArticles.push({ ...baseData, size: "-", qty: 0, tren: "-" });
+          } else {
+            matchingSizes.forEach(sz => {
+              formattedArticles.push({
+                ...baseData,
+                timestamp: sz.created_at ? new Date(sz.created_at).toLocaleString('id-ID') : baseData.timestamp,
+                size: sz.ukuran,
+                qty: sz.qty,
+                tren: sz.tren || "-"
+              });
+            });
+          }
+        });
+        globalData = formattedArticles;
+
+        // 2. AMBIL DATA HAK AKSES VENDOR 100% REAL-TIME DARI SUPABASE
+        const { data: vendorList, error: vendorErr } = await supabaseClient.from('vendors').select('*');
+        if (vendorErr) throw vendorErr;
         
-        const vendorList = await callBackend("readVendorData");
-        
-        // =================================================================
-        // PERBAIKAN TOTAL: Bersihkan spasi gaib & kebal Huruf Kapital
-        // =================================================================
         var match = vendorList.find(v => {
-          // Bersihkan username dari DB (Supabase/GAS) dari spasi di awal/akhir dan jadikan huruf kecil
           const dbUsername = v.username ? String(v.username).toLowerCase().trim() : '';
-          // Bersihkan parameter dari URL dari spasi di awal/akhir dan jadikan huruf kecil
           const targetUser = TARGET_VENDOR_USER ? String(TARGET_VENDOR_USER).toLowerCase().trim() : '';
-          
           return dbUsername === targetUser;
         });
         
@@ -160,7 +204,7 @@
           var namaTampilan = match.name || match.nama || "VENDOR";
           document.getElementById('txtNamaVendorWelcome').innerText = namaTampilan.toUpperCase();
           
-          var hakAkses = match.akses || match.data_akses || [];
+          var hakAkses = match.akses || [];
           if (typeof hakAkses === 'string') {
             listKategoriGlobal = hakAkses.split(',').map(k => k.trim()).sort();
           } else if (Array.isArray(hakAkses)) {
@@ -176,7 +220,7 @@
         }
       } catch (err) {
         Swal.fire("Koneksi Tersendat", err.message, "error");
-        if(artContainer) artContainer.innerHTML = `<div class="alert alert-danger">Gagal Sinkronisasi: ${err.message}</div>`;
+        if(artContainer) artContainer.innerHTML = `<div class="alert alert-danger">Gagal Sinkronisasi Cloud: ${err.message}</div>`;
       }
     }
 
@@ -191,9 +235,9 @@
       var tabsEl = document.getElementById('categoryTabs'); if(tabsEl) tabsEl.innerHTML = tabHtml;
       renderCards();
     }
+    
     function switchCategory(cat) { activeCategory = cat; buildCategoryTabs(listKategoriGlobal); }
 
-    // RENDER UTAMA KARTU VENDOR - BENAR-BENAR BERSIH TANPA FITUR LOG / EDIT
     function renderCards() {
       var container = document.getElementById('articlesContainer'); if(!container) return;
       var keyword = document.getElementById('searchArt') ? document.getElementById('searchArt').value.toLowerCase().trim() : "";
@@ -244,6 +288,7 @@
       if (btn) { if (input && input.value.trim() !== "") btn.style.setProperty('display', 'block', 'important'); else btn.style.setProperty('display', 'none', 'important'); }
       renderCards();
     }
+    
     function clearSearchArt() {
       var input = document.getElementById('searchArt'); if (input) { input.value = ""; input.focus(); }
       var btn = document.getElementById('btnClearSearchArt'); if (btn) btn.style.setProperty('display', 'none', 'important');
