@@ -144,19 +144,22 @@
         
         const vendorList = await callBackend("readVendorData");
         
-        // PERBAIKAN 1: Amankan pencarian dengan toLowerCase() agar kebal huruf kapital
+        // =================================================================
+        // PERBAIKAN TOTAL: Bersihkan spasi gaib & kebal Huruf Kapital
+        // =================================================================
         var match = vendorList.find(v => {
+          // Bersihkan username dari DB (Supabase/GAS) dari spasi di awal/akhir dan jadikan huruf kecil
           const dbUsername = v.username ? String(v.username).toLowerCase().trim() : '';
+          // Bersihkan parameter dari URL dari spasi di awal/akhir dan jadikan huruf kecil
           const targetUser = TARGET_VENDOR_USER ? String(TARGET_VENDOR_USER).toLowerCase().trim() : '';
+          
           return dbUsername === targetUser;
         });
         
         if(match) {
-          // PERBAIKAN 2: Antisipasi jika di database menggunakan kolom 'name' atau 'nama'
           var namaTampilan = match.name || match.nama || "VENDOR";
           document.getElementById('txtNamaVendorWelcome').innerText = namaTampilan.toUpperCase();
           
-          // PERBAIKAN 3: Antisipasi nama kolom hak akses ('akses' atau 'data-akses')
           var hakAkses = match.akses || match.data_akses || [];
           if (typeof hakAkses === 'string') {
             listKategoriGlobal = hakAkses.split(',').map(k => k.trim()).sort();
