@@ -593,7 +593,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 return "Pengaturan buffer berhasil diperbarui di cloud Supabase!";
             }
 
-            // ==========================================
+           // ==========================================
             // AKSI 3: SIMPAN ATAU UPDATE ARTIKEL & STOK
             // ==========================================
             else if (actionName === "saveOrUpdateSingleArticle") {
@@ -605,30 +605,33 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 let currentIsActive = true;
                 let currentIsPriority = false;
 
-                // PROTEKSI BUG WARNA & DATA LAMA
+                // FIX ANTI-BUG: Ambil data valid langsung dari database Supabase
                 if (!isArtikelBaru) {
-                    var matchGlobal = localArticlesList.find(g => g.sku === sku);
-                    if (matchGlobal) {
-                        if (!finalNama || finalNama.includes("[ARTIKEL BARU]")) finalNama = matchGlobal.nama;
-                        
-                        // Jika warna yang dikirim kosong, null, undefined, atau "-", kunci pakai warna asli di database
+                    const { data: dbArt } = await supabaseClient
+                        .from('articles')
+                        .select('name, color, is_active, is_priority')
+                        .eq('sku', sku)
+                        .maybeSingle();
+
+                    if (dbArt) {
+                        if (!finalNama || finalNama.includes("[ARTIKEL BARU]")) finalNama = dbArt.name;
+                        // Kunci warna asli dari database secara absolut jika input form kosong/strip
                         if (!finalWarna || finalWarna === "-") {
-                            finalWarna = matchGlobal.warna || matchGlobal.color;
+                            finalWarna = dbArt.color;
                         }
-                        
-                        currentIsActive = matchGlobal.isAktif ?? true;
-                        currentIsPriority = matchGlobal.isPriority ?? false;
+                        currentIsActive = dbArt.is_active ?? true;
+                        currentIsPriority = dbArt.is_priority ?? false;
                     }
                 }
 
-                // Jika benar-benar artikel baru dan tidak diisi warna, baru jadikan "-"
+                // Jika benar-benar kosong total (artikel baru tanpa warna), baru beri nilai "-"
                 if (!finalWarna) finalWarna = "-";
 
                 const { error: artErr } = await supabaseClient.from('articles').upsert({
                     sku: sku,
                     name: finalNama,
                     kategori: kategori,
-                    color: finalWarna, // <-- Sekarang aman, tidak akan tertimpa strip lagi
+                    color: finalWarna, 
                     status_tipe: status,
                     ads_global: parseFloat(adsGlobal) || 0,
                     is_active: currentIsActive,
