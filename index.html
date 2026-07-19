@@ -388,21 +388,21 @@
               <span class="text-muted small">Pilih dan kumpulkan artikel menggunakan tombol (+), lalu klik "Simpan Perubahan ke Cloud" untuk mengamankan data ke database Google Sheets.</span>
             </div>
           </div>
-          <div class="card bg-light border-0 shadow-sm p-3 mb-4">
-            <div class="row g-3 align-items-end">
+        <div class="card bg-light border-0 shadow-sm p-3 mb-4">
+            <div class="row g-3">
               <div class="col-md-3">
                 <label class="form-label small fw-bold text-primary">1. Buka Kotretan Vendor</label>
                 <select id="monVendor" class="form-select fw-bold border-primary" onchange="aksiMonVendorBerubah()">
                   <option value="">-- Pilih Vendor --</option>
                 </select>
               </div>
-              <div class="col-md-2">
+              <div class="col-md-3">
                 <label class="form-label small fw-bold">2. Filter Kategori</label>
                 <select id="monKategori" class="form-select" disabled onchange="aksiMonKategoriAtauStatusBerubah()">
                   <option value="">-- Pilih Kategori --</option>
                 </select>
               </div>
-              <div class="col-md-2">
+              <div class="col-md-3">
                 <label class="form-label small fw-bold">3. Filter Tipe (Pencarian)</label>
                 <select id="monStatus" class="form-select" disabled onchange="aksiMonKategoriAtauStatusBerubah()">
                   <option value="Semua">Semua Stok</option>
@@ -410,9 +410,10 @@
                   <option value="Fake Stock">Fake Stock</option>
                 </select>
               </div>
-             <div class="col-md-3 mb-3 d-flex align-items-end">
+              <div class="col-md-3">
+                <label class="form-label small fw-bold text-dark">4. Aksi Workspace</label>
                 <button type="button" class="btn btn-primary w-100 fw-bold shadow-sm" id="btnBukaModalArtikel" disabled onclick="bukaModalPilihArtikel()">
-                  <i class="fa-solid fa-list-check me-2"></i> 4. Pilih Banyak Artikel
+                  <i class="fa-solid fa-list-check me-2"></i> Pilih Banyak Artikel
                 </button>
               </div>
             </div>
