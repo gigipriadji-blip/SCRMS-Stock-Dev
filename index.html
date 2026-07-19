@@ -471,7 +471,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 const { data: articlesData, error: artErr } = await supabaseClient
                     .from('articles')
                     .select('*')
-                    .eq('is_active', true);
+                    
                 if (artErr) throw artErr;
 
                 const { data: invData, error: invErr } = await supabaseClient
@@ -566,15 +566,18 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                 var finalNama = nama || document.getElementById('comboInputArtikel').value.split(' [')[0];
                 var finalWarna = warna;
                 
-               let currentIsPriority = false;
-                if (!isArtikelBaru) {
-                    var matchGlobal = globalData.find(g => g.sku === sku);
-                    if (matchGlobal) {
-                        if (!finalNama || finalNama.includes("[ARTIKEL BARU]")) finalNama = matchGlobal.nama;
-                        if (!finalWarna) finalWarna = matchGlobal.warna;
-                        currentIsPriority = matchGlobal.isPriority ?? false; // Ambil status prioritas aslinya
-                    }
-                }
+               let currentIsActive = true;
+               let currentIsPriority = false; // <-- Tambahkan baris ini sebagai default
+
+             if (!isArtikelBaru) {
+             var matchGlobal = localArticlesList.find(g => g.sku === sku);
+             if (matchGlobal) {
+             if (!finalNama || finalNama.includes("[ARTIKEL BARU]")) finalNama = matchGlobal.nama;
+             if (!finalWarna) finalWarna = matchGlobal.warna;
+              currentIsActive = matchGlobal.isAktif ?? true;
+              currentIsPriority = matchGlobal.isPriority ?? false; // <-- Tambahkan baris ini untuk ambil status prioritas asli dari lokal
+             }
+        }
 
                 const { error: artErr } = await supabaseClient.from('articles').upsert({
                     sku: sku,
