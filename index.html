@@ -418,9 +418,10 @@
               </div>
             </div>
           </div>
-          <div class="card p-3 mb-3 bg-white border shadow-sm">
+         <div class="card p-3 mb-3 bg-white border shadow-sm">
             <div class="row g-3 align-items-center">
               <div class="col-12 col-lg-7 d-flex flex-wrap align-items-center gap-2">
+                
                 <div class="input-group input-group-sm w-auto">
                   <span class="input-group-text bg-light fw-bold text-muted">Tipe Stok:</span>
                   <select id="viewFilterStatus" class="form-select form-select-sm fw-bold" onchange="renderTabelKotretan()" disabled>
@@ -429,25 +430,55 @@
                     <option value="Fake Stock">Fake Stock</option>
                   </select>
                 </div>
+
+                <div class="input-group input-group-sm w-auto">
+                  <span class="input-group-text bg-light fw-bold text-muted">Kategori:</span>
+                  <select id="viewFilterKategori" class="form-select form-select-sm fw-bold" onchange="renderTabelKotretan()" disabled>
+                    <option value="Semua">Semua Kategori</option>
+                    <option value="T SHIRT">T SHIRT</option>
+                    <option value="HOODIE">HOODIE</option>
+                    <option value="JACKET">JACKET</option>
+                    <option value="SWEATPANTS">SWEATPANTS</option>
+                    <option value="SANDALS">SANDALS</option>
+                    <option value="BAGS">BAGS</option>
+                  </select>
+                </div>
+
                 <div class="input-group input-group-sm flex-grow-1" style="max-width: 320px;">
                   <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
                   <input type="text" id="searchTableText" class="form-control border-start-0 border-end-0" placeholder="Cari nama/SKU di dalam tabel..." onkeyup="filterTabelInternal()" disabled>
                   <button class="btn bg-light border border-start-0 text-muted" type="button" id="btnClearSearchTable" onclick="clearSearchTableInternal()" style="display: none; z-index: 4;"><i class="fa-solid fa-xmark"></i></button>
                 </div>
+
                 <button class="btn btn-xs btn-outline-danger fw-bold py-1" onclick="kosongkanKotretanLokal()" id="btnResetKotretan" disabled><i class="fa-solid fa-trash-can me-1"></i>Reset Layar</button>
               </div>
+
               <div class="col-12 col-lg-5 text-lg-end d-flex justify-content-lg-end flex-wrap gap-2">
                 <button class="btn btn-primary btn-sm fw-bold shadow border border-light" onclick="simpanBatchKotretanKeCloud()" id="btnSaveCloud" disabled><i class="fa-solid fa-cloud-arrow-up me-1"></i>SIMPAN PERUBAHAN KE CLOUD</button>
                 <button class="btn btn-success btn-sm fw-bold shadow-sm" onclick="exportMonitorToExcel()" id="btnExportEx" disabled><i class="fa-solid fa-file-excel me-1"></i>EXCEL</button>
                 <button class="btn btn-danger btn-sm fw-bold shadow-sm" onclick="exportMonitorToPDF()" id="btnExportPdf" disabled><i class="fa-solid fa-file-pdf me-1"></i>PDF</button>
               </div>
             </div>
+            
             <div class="text-muted text-xs mt-2" id="labelActiveVendor"><i class="fa-solid fa-info-circle me-1"></i>Silakan buka nama vendor untuk mengaktifkan workspace kotretan.</div>
           </div>
+
           <div class="table-responsive rounded border shadow-sm bg-white">
             <table class="table table-hover align-middle border mb-0 text-center" style="font-size:0.85rem;" id="tableKotretan">
               <thead class="table-dark">
-                <tr><th>Kategori</th><th>Nama Artikel</th><th>SKU</th><th>Tipe & Warna</th><th>S / 28</th><th>M / 30</th><th>L / 32</th><th>XL / 34</th><th>XXL</th><th>Total</th><th class="exclude-export">Aksi</th></tr>
+                <tr>
+                  <th>Kategori</th>
+                  <th>Nama Artikel</th>
+                  <th>SKU</th>
+                  <th>Tipe & Warna</th>
+                  <th>S / 28 / 39</th>
+                  <th>M / 30 / 40</th>
+                  <th>L / 32 / 41</th>
+                  <th>XL / 34 / 42</th>
+                  <th>XXL / 36 / 43</th>
+                  <th>Total</th>
+                  <th class="exclude-export">Aksi</th>
+                </tr>
               </thead>
               <tbody id="tbodyKotretan">
                 <tr id="rowKosong"><td colspan="11" class="text-muted py-5"><i class="fa-solid fa-users-rectangle fa-2x mb-2 text-secondary"></i><br>Silakan pilih Vendor di atas untuk membuka area kotretannya.</td></tr>
@@ -1835,27 +1866,59 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
   return objectsList;
 }
     function renderTabelKotretan() {
-      var tbody = document.getElementById('tbodyKotretan'); if(!tbody) return;
-      var currentData = buildFilteredObjectsList(); var viewFilter = document.getElementById('viewFilterStatus').value;
-      var searchKeyword = document.getElementById('searchTableText') ? document.getElementById('searchTableText').value.toLowerCase().trim() : "";
-      
-      var filteredData = currentData.filter(r => (viewFilter === "Semua" || r.status === viewFilter) && (searchKeyword === "" || r.sku.toLowerCase().includes(searchKeyword) || r.nama.toLowerCase().includes(searchKeyword)));
-      if (currentData.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="text-muted py-5">Kotretan kosong. Gunakan panel di atas untuk menambah artikel.</td></tr>`; return; }
-      if (filteredData.length === 0) { tbody.innerHTML = `<tr><td colspan="11" class="text-muted py-4">Tidak ada data cocok dengan filter.</td></tr>`; return; }
-      
-      var html = ""; filteredData.forEach(r => {
-        html += `<tr>
-          <td class="text-start fw-bold text-uppercase small">${r.kategori}</td>
-          <td class="text-start fw-bold text-dark text-wrap">${r.nama}</td>
-          <td class="font-monospace text-start text-primary small">${r.sku}</td>
-          <td><span class="badge ${r.status.toLowerCase().includes('fake')?'bg-warning-subtle text-warning-emphasis':'bg-success-subtle text-success-emphasis'} border d-block mb-1">${r.status}</span><span class="badge bg-light text-dark border">${r.warna}</span></td>
-          ${r.isBag ? `<td colspan="5" class="bg-light font-monospace fw-bold text-primary">ALL SIZE [ ${r.allsize} pcs ]</td>` : `<td class="font-monospace">${r.s_28_39 || 0}</td><td class="font-monospace">${r.m_30_40 || 0}</td><td class="font-monospace">${r.l_32_41 || 0}</td><td class="font-monospace">${r.xl_34_42 || 0}</td><td class="font-monospace">${r.xxl_36_43 || 0}</td>`}
-          <td class="fw-bold text-dark bg-light">${r.total}</td>
-          <td class="exclude-export"><button class="btn btn-sm btn-outline-danger" onclick="hapusDariKotretan('${r.sku}')"><i class="fa-solid fa-times"></i></button></td>
-        </tr>`;
-      });
-      tbody.innerHTML = html;
-    }
+  var tbody = document.getElementById('tbodyKotretan'); 
+  if (!tbody) return;
+
+  var currentData = buildFilteredObjectsList(); 
+  
+  // 1. Ambil nilai filter Tipe Stok, Kategori (BARU), dan Kata Kunci Pencarian
+  var viewFilter = document.getElementById('viewFilterStatus') ? document.getElementById('viewFilterStatus').value : "Semua";
+  var viewKat = document.getElementById('viewFilterKategori') ? document.getElementById('viewFilterKategori').value : "Semua"; // <-- PENAMBAHAN KATEGORI
+  var searchKeyword = document.getElementById('searchTableText') ? document.getElementById('searchTableText').value.toLowerCase().trim() : "";
+  
+  // 2. Filter data berdasarkan ketiga parameter
+  var filteredData = currentData.filter(r => {
+    var cocokStatus = (viewFilter === "Semua" || r.status === viewFilter);
+    var cocokKategori = (viewKat === "Semua" || (r.kategori && r.kategori.toUpperCase().trim() === viewKat.toUpperCase().trim())); // <-- LOGIKA FILTER KATEGORI
+    var cocokSearch = (searchKeyword === "" || r.sku.toLowerCase().includes(searchKeyword) || r.nama.toLowerCase().includes(searchKeyword));
+    
+    return cocokStatus && cocokKategori && cocokSearch;
+  });
+
+  // 3. Tampilan jika data kosong
+  if (currentData.length === 0) { 
+    tbody.innerHTML = `<tr><td colspan="11" class="text-muted py-5"><i class="fa-solid fa-users-rectangle fa-2x mb-2 text-secondary"></i><br>Kotretan kosong. Gunakan panel di atas untuk menambah artikel.</td></tr>`; 
+    return; 
+  }
+  if (filteredData.length === 0) { 
+    tbody.innerHTML = `<tr><td colspan="11" class="text-muted py-4"><i class="fa-solid fa-filter-circle-xmark fa-2x mb-2 text-warning"></i><br>Tidak ada data yang cocok dengan filter.</td></tr>`; 
+    return; 
+  }
+  
+  // 4. Render baris tabel HTML
+  var html = ""; 
+  filteredData.forEach(r => {
+    html += `<tr>
+      <td class="text-start fw-bold text-uppercase small">${r.kategori}</td>
+      <td class="text-start fw-bold text-dark text-wrap">${r.nama}</td>
+      <td class="font-monospace text-start text-primary small">${r.sku}</td>
+      <td>
+        <span class="badge ${r.status.toLowerCase().includes('fake')?'bg-warning-subtle text-warning-emphasis':'bg-success-subtle text-success-emphasis'} border d-block mb-1">${r.status}</span>
+        <span class="badge bg-light text-dark border">${r.warna}</span>
+      </td>
+      ${r.isBag 
+        ? `<td colspan="5" class="bg-light font-monospace fw-bold text-primary">ALL SIZE [ ${r.allsize} pcs ]</td>` 
+        : `<td class="font-monospace">${r.s_28_39 || 0}</td><td class="font-monospace">${r.m_30_40 || 0}</td><td class="font-monospace">${r.l_32_41 || 0}</td><td class="font-monospace">${r.xl_34_42 || 0}</td><td class="font-monospace">${r.xxl_36_43 || 0}</td>`
+      }
+      <td class="fw-bold text-dark bg-light">${r.total}</td>
+      <td class="exclude-export">
+        <button class="btn btn-sm btn-outline-danger" onclick="hapusDariKotretan('${r.sku}')"><i class="fa-solid fa-times"></i></button>
+      </td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = html;
+}
     function filterTabelInternal() {
       var input = document.getElementById('searchTableText'); var btn = document.getElementById('btnClearSearchTable');
       if (btn) { if (input && input.value.trim() !== "") btn.style.setProperty('display', 'block', 'important'); else btn.style.setProperty('display', 'none', 'important'); }
