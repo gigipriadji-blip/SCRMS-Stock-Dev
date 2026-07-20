@@ -1849,7 +1849,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
           <td class="text-start fw-bold text-dark text-wrap">${r.nama}</td>
           <td class="font-monospace text-start text-primary small">${r.sku}</td>
           <td><span class="badge ${r.status.toLowerCase().includes('fake')?'bg-warning-subtle text-warning-emphasis':'bg-success-subtle text-success-emphasis'} border d-block mb-1">${r.status}</span><span class="badge bg-light text-dark border">${r.warna}</span></td>
-          ${r.isBag ? `<td colspan="5" class="bg-light font-monospace fw-bold text-primary">ALL SIZE [ ${r.allsize} pcs ]</td>` : `<td class="font-monospace">${r.s_28}</td><td class="font-monospace">${r.m_30}</td><td class="font-monospace">${r.l_32}</td><td class="font-monospace">${r.xl_34}</td><td class="font-monospace">${r.xxl}</td>`}
+          ${r.isBag ? `<td colspan="5" class="bg-light font-monospace fw-bold text-primary">ALL SIZE [ ${r.allsize} pcs ]</td>` : `<td class="font-monospace">${r.s_28_39 || 0}</td><td class="font-monospace">${r.m_30_40 || 0}</td><td class="font-monospace">${r.l_32_41 || 0}</td><td class="font-monospace">${r.xl_34_42 || 0}</td><td class="font-monospace">${r.xxl_36_43 || 0}</td>`}
           <td class="fw-bold text-dark bg-light">${r.total}</td>
           <td class="exclude-export"><button class="btn btn-sm btn-outline-danger" onclick="hapusDariKotretan('${r.sku}')"><i class="fa-solid fa-times"></i></button></td>
         </tr>`;
