@@ -1877,32 +1877,65 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
   if (!tbody) return;
 
   var currentData = buildFilteredObjectsList(); 
-  
-  // 1. Ambil nilai filter Tipe Stok, Kategori (BARU), dan Kata Kunci Pencarian
-  var viewFilter = document.getElementById('viewFilterStatus') ? document.getElementById('viewFilterStatus').value : "Semua";
-  var viewKat = document.getElementById('viewFilterKategori') ? document.getElementById('viewFilterKategori').value : "Semua"; // <-- PENAMBAHAN KATEGORI
+
+  // =========================================================
+  // 1. OTOMATISASI DROPDOWN FILTER KATEGORI SESUAI ISI KOTRETAN
+  // =========================================================
+  var selectKatEl = document.getElementById('viewFilterKategori');
+  if (selectKatEl) {
+    var selectedKatSebelumnya = selectKatEl.value || "Semua";
+
+    // Ambil semua kategori unik yang ADA di dalam kotretan saat ini
+    var kategoriAdaInKotretan = [];
+    currentData.forEach(r => {
+      if (r.kategori && !kategoriAdaInKotretan.includes(r.kategori.toUpperCase().trim())) {
+        kategoriAdaInKotretan.push(r.kategori.toUpperCase().trim());
+      }
+    });
+    kategoriAdaInKotretan.sort();
+
+    // Re-build isi opsi dropdown
+    var optHtml = '<option value="Semua">Semua Kategori</option>';
+    kategoriAdaInKotretan.forEach(kat => {
+      optHtml += `<option value="${kat}">${kat}</option>`;
+    });
+    selectKatEl.innerHTML = optHtml;
+
+    // Jaga agar pilihan filter pengguna tidak ter-reset jika kategorinya masih ada
+    if (kategoriAdaInKotretan.includes(selectedKatSebelumnya)) {
+      selectKatEl.value = selectedKatSebelumnya;
+    } else {
+      selectKatEl.value = "Semua";
+    }
+  }
+
+  // =========================================================
+  // 2. BACA VALUE FILTER & LAKUKAN PENYARINGAN DATA
+  // =========================================================
+  var viewFilterStatus = document.getElementById('viewFilterStatus') ? document.getElementById('viewFilterStatus').value : "Semua";
+  var viewKat = selectKatEl ? selectKatEl.value : "Semua";
   var searchKeyword = document.getElementById('searchTableText') ? document.getElementById('searchTableText').value.toLowerCase().trim() : "";
-  
-  // 2. Filter data berdasarkan ketiga parameter
+
   var filteredData = currentData.filter(r => {
-    var cocokStatus = (viewFilter === "Semua" || r.status === viewFilter);
-    var cocokKategori = (viewKat === "Semua" || (r.kategori && r.kategori.toUpperCase().trim() === viewKat.toUpperCase().trim())); // <-- LOGIKA FILTER KATEGORI
+    var cocokStatus = (viewFilterStatus === "Semua" || r.status === viewFilterStatus);
+    var cocokKategori = (viewKat === "Semua" || (r.kategori && r.kategori.toUpperCase().trim() === viewKat.toUpperCase().trim()));
     var cocokSearch = (searchKeyword === "" || r.sku.toLowerCase().includes(searchKeyword) || r.nama.toLowerCase().includes(searchKeyword));
-    
+
     return cocokStatus && cocokKategori && cocokSearch;
   });
 
-  // 3. Tampilan jika data kosong
+  // =========================================================
+  // 3. RENDER TAMPILAN TABEL
+  // =========================================================
   if (currentData.length === 0) { 
     tbody.innerHTML = `<tr><td colspan="11" class="text-muted py-5"><i class="fa-solid fa-users-rectangle fa-2x mb-2 text-secondary"></i><br>Kotretan kosong. Gunakan panel di atas untuk menambah artikel.</td></tr>`; 
     return; 
   }
   if (filteredData.length === 0) { 
-    tbody.innerHTML = `<tr><td colspan="11" class="text-muted py-4"><i class="fa-solid fa-filter-circle-xmark fa-2x mb-2 text-warning"></i><br>Tidak ada data yang cocok dengan filter.</td></tr>`; 
+    tbody.innerHTML = `<tr><td colspan="11" class="text-muted py-4"><i class="fa-solid fa-filter-circle-xmark fa-2x mb-2 text-warning"></i><br>Tidak ada data cocok dengan filter.</td></tr>`; 
     return; 
   }
-  
-  // 4. Render baris tabel HTML
+
   var html = ""; 
   filteredData.forEach(r => {
     html += `<tr>
