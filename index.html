@@ -1680,54 +1680,61 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
       } catch(e) { console.error("Dropdown monitor vendor bermasalah."); }
     }
     function aksiMonVendorBerubah() {
-      var selectVendor = document.getElementById('monVendor'); 
-      var selectKat = document.getElementById('monKategori');
-      var selectStatus = document.getElementById('monStatus'); 
-      
-      // Ambil ID tombol baru kita
-      var btnBukaModal = document.getElementById('btnBukaModalArtikel');
-      
-      selectKat.innerHTML = '<option value="">-- Pilih Kategori --</option>'; 
-      selectKat.disabled = true; 
-      selectStatus.disabled = true; 
-      selectStatus.value = "Semua";
-      
-      if (btnBukaModal) btnBukaModal.disabled = true; // Kunci tombol aksi di awal
-      
-      activeVendorUser = selectVendor.value; 
-      clearSearchTableInternal();
+  var selectVendor = document.getElementById('monVendor'); 
+  var selectKat = document.getElementById('monKategori');
+  var selectStatus = document.getElementById('monStatus'); 
+  
+  var btnBukaModal = document.getElementById('btnBukaModalArtikel');
+  
+  selectKat.innerHTML = '<option value="">-- Pilih Kategori --</option>'; 
+  selectKat.disabled = true; 
+  selectStatus.disabled = true; 
+  selectStatus.value = "Semua";
+  
+  if (btnBukaModal) btnBukaModal.disabled = true;
+  
+  activeVendorUser = selectVendor.value; 
+  clearSearchTableInternal();
 
-      if (activeVendorUser === "") {
-        document.getElementById('labelActiveVendor').innerHTML = '<i class="fa-solid fa-info-circle me-1"></i>Workspace non-aktif.';
-        document.getElementById('viewFilterStatus').disabled = true; 
-        document.getElementById('searchTableText').disabled = true;
-        document.getElementById('btnResetKotretan').disabled = true; 
-        document.getElementById('btnSaveCloud').disabled = true;
-        document.getElementById('btnExportEx').disabled = true; 
-        document.getElementById('btnExportPdf').disabled = true;
-        document.getElementById('tbodyKotretan').innerHTML = `<tr><td colspan="11" class="text-muted py-5">Silakan pilih vendor untuk membuka area kotretan.</td></tr>`; 
-        return;
-      }
-      
-      var selectedOpt = selectVendor.options[selectVendor.selectedIndex];
-      activeVendorName = selectedOpt.getAttribute('data-nama');
-      document.getElementById('labelActiveVendor').innerHTML = `Workspace Aktif: <strong class="text-dark">${activeVendorName}</strong>`;
-      document.getElementById('viewFilterStatus').disabled = false; 
-      document.getElementById('searchTableText').disabled = false;
-      document.getElementById('btnResetKotretan').disabled = false; 
-      document.getElementById('btnSaveCloud').disabled = false;
-      document.getElementById('btnExportEx').disabled = false; 
-      document.getElementById('btnExportPdf').disabled = false;
+  if (activeVendorUser === "") {
+    document.getElementById('labelActiveVendor').innerHTML = '<i class="fa-solid fa-info-circle me-1"></i>Workspace non-aktif.';
+    document.getElementById('viewFilterStatus').disabled = true; 
+    
+    // 📍 TAMBAHKAN BARIS INI (Kunci saat Vendor Kosong)
+    if (document.getElementById('viewFilterKategori')) document.getElementById('viewFilterKategori').disabled = true; 
+    
+    document.getElementById('searchTableText').disabled = true;
+    document.getElementById('btnResetKotretan').disabled = true; 
+    document.getElementById('btnSaveCloud').disabled = true;
+    document.getElementById('btnExportEx').disabled = true; 
+    document.getElementById('btnExportPdf').disabled = true;
+    document.getElementById('tbodyKotretan').innerHTML = `<tr><td colspan="11" class="text-muted py-5">Silakan pilih vendor untuk membuka area kotretan.</td></tr>`; 
+    return;
+  }
+  
+  var selectedOpt = selectVendor.options[selectVendor.selectedIndex];
+  activeVendorName = selectedOpt.getAttribute('data-nama');
+  document.getElementById('labelActiveVendor').innerHTML = `Workspace Aktif: <strong class="text-dark">${activeVendorName}</strong>`;
+  
+  // 📍 Buka gembok filter saat Vendor sudah dipilih
+  document.getElementById('viewFilterStatus').disabled = false; 
+  if (document.getElementById('viewFilterKategori')) document.getElementById('viewFilterKategori').disabled = false; // <-- Buka Filter Kategori
+  
+  document.getElementById('searchTableText').disabled = false;
+  document.getElementById('btnResetKotretan').disabled = false; 
+  document.getElementById('btnSaveCloud').disabled = false;
+  document.getElementById('btnExportEx').disabled = false; 
+  document.getElementById('btnExportPdf').disabled = false;
 
-      if (!globalKotretanDbMap[activeVendorUser]) globalKotretanDbMap[activeVendorUser] = [];
-      var aksesStr = selectedOpt.getAttribute('data-akses');
-      if (aksesStr && aksesStr.trim() !== "") {
-        monitorActiveAksesKategori = aksesStr.split(',').sort(); 
-        selectKat.disabled = false;
-        monitorActiveAksesKategori.forEach(cat => selectKat.insertAdjacentHTML('beforeend', `<option value="${cat}">${cat}</option>`));
-      }
-      renderTabelKotretan();
-    }
+  if (!globalKotretanDbMap[activeVendorUser]) globalKotretanDbMap[activeVendorUser] = [];
+  var aksesStr = selectedOpt.getAttribute('data-akses');
+  if (aksesStr && aksesStr.trim() !== "") {
+    monitorActiveAksesKategori = aksesStr.split(',').sort(); 
+    selectKat.disabled = false;
+    monitorActiveAksesKategori.forEach(cat => selectKat.insertAdjacentHTML('beforeend', `<option value="${cat}">${cat}</option>`));
+  }
+  renderTabelKotretan();
+}
 
     function aksiMonKategoriAtauStatusBerubah() {
       var selectKat = document.getElementById('monKategori').value; 
