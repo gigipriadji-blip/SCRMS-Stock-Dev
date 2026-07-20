@@ -820,6 +820,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
             }
 
            // =========================================================
+            // =========================================================
             // 9. BULK IMPORT MASTER DATA DARI DATA EXCEL (HORIZONTAL - FIXED MATCH)
             // =========================================================
             else if (actionName === "importBulkData") {
@@ -851,23 +852,32 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
                         continue;
                     }
                     
-                    // 2. Tentukan mapping ukuran dan posisi kolom Excel secara Horizontal (Geser Mulai Index 5)
+                    // 2. Tentukan mapping ukuran dan posisi kolom Excel secara Horizontal (Geser Mulai Index 5 / Kolom F)
                     let sizeMapping = [];
                     
-                    if (kategori === "BAG" || kategori === "BAGS") {
+                    if (kategori === "BAG" || kategori === "BAGS" || kategori === "ACCESSORIES") {
                         // Kategori BAGS: nilai stok berada di kolom ke-6 (Index 5)
                         let qtyAllSize = parseInt(row[5]) || 0;
                         sizeMapping.push({ size: "ALL SIZE", qty: qtyAllSize });
                     } 
-                    else if (["PANTS", "SWEAT PANTS", "SWEATPANTS"].includes(kategori)) {
-                        // Kategori PANTS: 28(5), 30(6), 32(7), 34(8)
+                    else if (["PANTS", "SWEAT PANTS", "SWEATPANTS", "SHORT PANTS"].includes(kategori)) {
+                        // Kategori PANTS / SWEATPANTS: 28(Index 5), 30(Index 6), 32(Index 7), 34(Index 8), 36(Index 9)
                         sizeMapping.push({ size: "28", qty: parseInt(row[5]) || 0 });
                         sizeMapping.push({ size: "30", qty: parseInt(row[6]) || 0 });
                         sizeMapping.push({ size: "32", qty: parseInt(row[7]) || 0 });
                         sizeMapping.push({ size: "34", qty: parseInt(row[8]) || 0 });
+                        sizeMapping.push({ size: "36", qty: parseInt(row[9]) || 0 });
                     } 
+                    else if (["SANDAL", "SANDALS", "SLIPPER", "SHOES"].includes(kategori)) {
+                        // Kategori SANDALS / SHOES: 39(Index 5), 40(Index 6), 41(Index 7), 42(Index 8), 43(Index 9)
+                        sizeMapping.push({ size: "39", qty: parseInt(row[5]) || 0 });
+                        sizeMapping.push({ size: "40", qty: parseInt(row[6]) || 0 });
+                        sizeMapping.push({ size: "41", qty: parseInt(row[7]) || 0 });
+                        sizeMapping.push({ size: "42", qty: parseInt(row[8]) || 0 });
+                        sizeMapping.push({ size: "43", qty: parseInt(row[9]) || 0 });
+                    }
                     else {
-                        // Kategori Umum (POLO, JACKET, dll): S(5), M(6), L(7), XL(8), XXL(9)
+                        // Kategori Umum (T SHIRT, POLO, JACKET, HOODIE, dll): S(5), M(6), L(7), XL(8), XXL(9)
                         sizeMapping.push({ size: "S", qty: parseInt(row[5]) || 0 });
                         sizeMapping.push({ size: "M", qty: parseInt(row[6]) || 0 });
                         sizeMapping.push({ size: "L", qty: parseInt(row[7]) || 0 });
@@ -1170,8 +1180,18 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
         var adaSizeKritis = false; var sizeBoxesHtml = ""; var limitBatasKritis = Math.ceil(art.adsGlobal * vendorBufferDays);
         var totalStokArtikel = 0; art.sizes.forEach(s => totalStokArtikel += parseInt(s.qty) || 0);
         
-        var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
-        art.sizes.sort((a, b) => (urutanBaku.indexOf(a.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(a.size.toUpperCase())) - (urutanBaku.indexOf(b.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(b.size.toUpperCase())));
+        var urutanBaku = [
+        "S", "M", "L", "XL", "XXL", "XXXL", 
+        "28", "30", "32", "34", "36", 
+        "39", "40", "41", "42", "43", 
+        "NON", "ALL SIZE"
+    ];
+
+      art.sizes.sort((a, b) => {
+      var idxA = urutanBaku.indexOf(a.size.toUpperCase().trim());
+      var idxB = urutanBaku.indexOf(b.size.toUpperCase().trim());
+    return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+  });
         
         art.sizes.forEach(function(sz) {
           var isSizeKritis = sz.qty <= limitBatasKritis; if(isSizeKritis) adaSizeKritis = true;
@@ -1223,7 +1243,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
         var tableRows = "";
         
         // Definisikan urutan ukuran baku
-        var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
+       var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "36" , "39", "40", "41", "42", "43" , "Non", "ALL SIZE"];
         
         // Logika Multi-Level Sorting (Waktu Utama Teratas -> Jika Sama -> Urutkan Size S ke XXL)
         logs.sort((a, b) => {
@@ -1269,7 +1289,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
         grouped[item.sku].sizes[item.size] = item.qty;
       });
       var allSizes = new Set(); Object.values(grouped).forEach(art => Object.keys(art.sizes).forEach(sz => allSizes.add(sz)));
-      var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
+      var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "36" , "39", "40", "41", "42", "43" , "Non", "ALL SIZE"];
       var sizeHeaders = Array.from(allSizes).sort((a,b)=>urutanBaku.indexOf(a.toUpperCase())-urutanBaku.indexOf(b.toUpperCase()));
       wsData[4] = wsData[4].concat(sizeHeaders);
       Object.values(grouped).forEach(art => {
@@ -1327,7 +1347,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
       document.getElementById('recapTotalKategori').innerText = setKategori.size;
 
       tbody.innerHTML = ""; if(filtered.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-4">Tidak ada data ditemukan.</td></tr>`; return; }
-      var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"]; var html = "";
+      var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "36" , "39", "40", "41", "42", "43" , "Non", "ALL SIZE"]; var html = "";
 
       filtered.forEach(function(art) {
         var sizeBadges = "";
@@ -1377,7 +1397,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
     function exportMasterToExcel() {
       var wsData = [["BACKUP DATABASE - MASTER KATALOG SCREAMOUS"],["TANGGAL EXPORT:", new Date().toLocaleDateString('id-ID')],[],["KATEGORI", "SKU", "NAMA ARTIKEL", "WARNA", "TOTAL STOK", "STATUS AKTIF"]];
       var allSizes = new Set(); groupedMaster.forEach(art => Object.keys(art.sizes).forEach(sz => allSizes.add(sz)));
-      var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
+      var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "36" , "39", "40", "41", "42", "43" , "Non", "ALL SIZE"];
       var sizeHeaders = Array.from(allSizes).sort((a,b)=>urutanBaku.indexOf(a.toUpperCase())-urutanBaku.indexOf(b.toUpperCase()));
       wsData[3] = wsData[3].concat(sizeHeaders);
       groupedMaster.forEach(art => {
@@ -1446,9 +1466,36 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
 
       if (isArtikelBaru) {
         formBaru.classList.remove('d-none'); document.getElementById('inputSkuBaru').value = ""; document.getElementById('inputNamaBaru').value = ""; document.getElementById('inputWarnaBaru').value = ""; document.getElementById('controlAds').value = 0; document.getElementById('controlStatus').value = "Real Stock";
-        if (targetKategoriText === "BAG" || targetKategoriText === "BAGS") sizesList = [{size: "ALL SIZE", qty: 0}];
-        else if (["PANTS", "SWEAT PANTS", "SWEATPANTS"].includes(targetKategoriText)) sizesList = [{size:"28",qty:0},{size:"30",qty:0},{size:"32",qty:0},{size:"34",qty:0}];
-        else sizesList = [{size:"S",qty:0},{size:"M",qty:0},{size:"L",qty:0},{size:"XL",qty:0},{size:"XXL",qty:0}];
+        if (targetKategoriText === "BAG" || targetKategoriText === "BAGS" || targetKategoriText === "ACCESSORIES") {
+            sizesList = [{size: "ALL SIZE", qty: 0}];
+        }
+        else if (["PANTS", "SWEAT PANTS", "SWEATPANTS", "SHORT PANTS"].includes(targetKategoriText)) {
+            sizesList = [
+                {size: "28", qty: 0},
+                {size: "30", qty: 0},
+                {size: "32", qty: 0},
+                {size: "34", qty: 0},
+                {size: "36", qty: 0} // <-- Tambahkan Size 36
+            ];
+        }
+        else if (["SANDAL", "SANDALS", "SLIPPER", "SHOES"].includes(targetKategoriText)) {
+            sizesList = [
+                {size: "39", qty: 0},
+                {size: "40", qty: 0},
+                {size: "41", qty: 0},
+                {size: "42", qty: 0},
+                {size: "43", qty: 0} // <-- Tambahkan Kondisi Sandals (39-43)
+            ];
+        }
+        else {
+            sizesList = [
+                {size: "S", qty: 0},
+                {size: "M", qty: 0},
+                {size: "L", qty: 0},
+                {size: "XL", qty: 0},
+                {size: "XXL", qty: 0}
+            ];
+        }
       } else {
         var matches = globalData.filter(item => item.sku === targetSku);
        if(matches.length > 0) {
@@ -1459,7 +1506,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
           matches.forEach(m => sizesList.push({ size: m.size, qty: m.qty }));
 
           // Urutkan sizesList dari S sampai XXL secara alfabetis/baku sebelum digambar
-          var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
+          var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "36" , "39", "40", "41", "42", "43" , "Non", "ALL SIZE"];
           sizesList.sort((a, b) => {
               var idxA = urutanBaku.indexOf((a.size || "").toUpperCase());
               var idxB = urutanBaku.indexOf((b.size || "").toUpperCase());
@@ -1724,23 +1771,69 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
       });
     }
     function buildFilteredObjectsList() {
-      var savedSkus = globalKotretanDbMap[activeVendorUser] || []; var objectsList = [];
-      savedSkus.forEach(sku => {
-        var targetItems = globalData.filter(i => i.sku === sku); if(targetItems.length === 0) return;
-        var rowObj = { kategori: targetItems[0].kategori, nama: targetItems[0].nama, sku: targetItems[0].sku, status: targetItems[0].status, warna: targetItems[0].warna, s_28: 0, m_30: 0, l_32: 0, xl_34: 0, xxl: 0, allsize: 0, isBag: false, total: 0 };
-        targetItems.forEach(item => {
-          var sz = item.size.toUpperCase().trim(); var qty = parseInt(item.qty) || 0; rowObj.total += qty;
-          if (sz === "S" || sz === "28") rowObj.s_28 = qty;
-          else if (sz === "M" || sz === "30") rowObj.m_30 = qty;
-          else if (sz === "L" || sz === "32") rowObj.l_32 = qty;
-          else if (sz === "XL" || sz === "34") rowObj.xl_34 = qty;
-          else if (sz === "XXL") rowObj.xxl = qty;
-          else { rowObj.allsize = qty; rowObj.isBag = true; }
-        });
-        objectsList.push(rowObj);
-      });
-      return objectsList;
-    }
+  var savedSkus = globalKotretanDbMap[activeVendorUser] || [];
+  var objectsList = [];
+
+  savedSkus.forEach(sku => {
+    var targetItems = globalData.filter(i => i.sku === sku);
+    if (targetItems.length === 0) return;
+
+    var rowObj = {
+      kategori: targetItems[0].kategori,
+      nama: targetItems[0].nama,
+      sku: targetItems[0].sku,
+      status: targetItems[0].status,
+      warna: targetItems[0].warna,
+      s_28_39: 0,   // S / 28 / 39
+      m_30_40: 0,   // M / 30 / 40
+      l_32_41: 0,   // L / 32 / 41
+      xl_34_42: 0,  // XL / 34 / 42
+      xxl_36_43: 0, // XXL / 36 / 43
+      allsize: 0,
+      isBag: false,
+      total: 0
+    };
+
+    targetItems.forEach(item => {
+      var sz = item.size.toUpperCase().trim();
+      var qty = parseInt(item.qty) || 0;
+      rowObj.total += qty;
+
+      // Pemetaan Kolom 1 (Terkecil)
+      if (sz === "S" || sz === "28" || sz === "39") {
+        rowObj.s_28_39 = qty;
+      }
+      // Pemetaan Kolom 2
+      else if (sz === "M" || sz === "30" || sz === "40") {
+        rowObj.m_30_40 = qty;
+      }
+      // Pemetaan Kolom 3
+      else if (sz === "L" || sz === "32" || sz === "41") {
+        rowObj.l_32_41 = qty;
+      }
+      // Pemetaan Kolom 4
+      else if (sz === "XL" || sz === "34" || sz === "42") {
+        rowObj.xl_34_42 = qty;
+      }
+      // Pemetaan Kolom 5 (Terbesar)
+      else if (sz === "XXL" || sz === "36" || sz === "43") {
+        rowObj.xxl_36_43 = qty;
+      }
+      // Pemetaan Khusus Tas / Accessories / ALL SIZE
+      else if (sz === "ALL SIZE" || sz === "ALLSIZE" || sz === "NON") {
+        rowObj.allsize = qty;
+        rowObj.isBag = true;
+      }
+      else {
+        rowObj.allsize = qty;
+      }
+    });
+
+    objectsList.push(rowObj);
+  });
+
+  return objectsList;
+}
     function renderTabelKotretan() {
       var tbody = document.getElementById('tbodyKotretan'); if(!tbody) return;
       var currentData = buildFilteredObjectsList(); var viewFilter = document.getElementById('viewFilterStatus').value;
@@ -1771,19 +1864,74 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
     function clearSearchTableInternal() { var input = document.getElementById('searchTableText'); if (input) input.value = ""; var btn = document.getElementById('btnClearSearchTable'); if (btn) btn.style.setProperty('display', 'none', 'important'); renderTabelKotretan(); }
     
     function exportMonitorToExcel() {
-      var filteredData = buildFilteredObjectsList();
-      var wsData = [["LAPORAN TARGET ALOKASI PRODUKSI"],["NAMA VENDOR:", activeVendorName],[],["KATEGORI", "NAMA ARTIKEL", "SKU", "TIPE STOK", "WARNA", "S / 28", "M / 30", "L / 32", "XL / 34", "XXL", "TOTAL QTY"]];
-      filteredData.forEach(r => wsData.push([r.kategori, r.nama, r.sku, r.status, r.warna, r.isBag?r.allsize:r.s_28, r.isBag?"":r.m_30, r.isBag?"":r.l_32, r.isBag?"":r.xl_34, r.isBag?"":r.xxl, r.total]));
-      var wb = XLSX.utils.book_new(); var ws = XLSX.utils.aoa_to_sheet(wsData); XLSX.utils.book_append_sheet(wb, ws, "TARGET"); XLSX.writeFile(wb, `Target_${activeVendorName}.xlsx`);
-    }
-    function exportMonitorToPDF() {
-      var filteredData = buildFilteredObjectsList(); const { jsPDF } = window.jspdf; const doc = new jsPDF('landscape');
-      doc.text(`Laporan Target Stok: ${activeVendorName}`, 14, 20);
-      var bodyData = filteredData.map(r => [r.kategori, r.nama, r.sku, r.status, r.isBag?`ALL SIZE (${r.allsize})`:r.s_28.toString(), r.isBag?"":r.m_30.toString(), r.isBag?"":r.l_32.toString(), r.isBag?"":r.xl_34.toString(), r.isBag?"":r.xxl.toString(), r.total.toString()]);
-      doc.autoTable({ startY: 30, head: [['Kategori', 'Nama Artikel', 'SKU', 'Tipe', 'S/28', 'M/30', 'L/32', 'XL/34', 'XXL', 'Total']], body: bodyData });
-      doc.save(`Target_${activeVendorName}.pdf`);
-    }
+  var filteredData = buildFilteredObjectsList();
+  var wsData = [
+    ["LAPORAN TARGET ALOKASI PRODUKSI"],
+    ["NAMA VENDOR:", activeVendorName],
+    [],
+    [
+      "KATEGORI", 
+      "NAMA ARTIKEL", 
+      "SKU", 
+      "TIPE STOK", 
+      "WARNA", 
+      "S / 28 / 39", 
+      "M / 30 / 40", 
+      "L / 32 / 41", 
+      "XL / 34 / 42", 
+      "XXL / 36 / 43", 
+      "TOTAL QTY"
+    ]
+  ];
 
+  filteredData.forEach(r => wsData.push([
+    r.kategori, 
+    r.nama, 
+    r.sku, 
+    r.status, 
+    r.warna, 
+    r.isBag ? r.allsize : r.s_28_39, 
+    r.isBag ? "" : r.m_30_40, 
+    r.isBag ? "" : r.l_32_41, 
+    r.isBag ? "" : r.xl_34_42, 
+    r.isBag ? "" : r.xxl_36_43, 
+    r.total
+  ]));
+
+  var wb = XLSX.utils.book_new(); 
+  var ws = XLSX.utils.aoa_to_sheet(wsData); 
+  XLSX.utils.book_append_sheet(wb, ws, "TARGET"); 
+  XLSX.writeFile(wb, `Target_${activeVendorName}.xlsx`);
+}
+    function exportMonitorToPDF() {
+  var filteredData = buildFilteredObjectsList(); 
+  const { jsPDF } = window.jspdf; 
+  const doc = new jsPDF('landscape');
+
+  doc.setFontSize(14);
+  doc.text(`Laporan Target Stok: ${activeVendorName}`, 14, 20);
+
+  var bodyData = filteredData.map(r => [
+    r.kategori, 
+    r.nama, 
+    r.sku, 
+    r.status, 
+    r.isBag ? `ALL SIZE (${r.allsize})` : r.s_28_39.toString(), 
+    r.isBag ? "" : r.m_30_40.toString(), 
+    r.isBag ? "" : r.l_32_41.toString(), 
+    r.isBag ? "" : r.xl_34_42.toString(), 
+    r.isBag ? "" : r.xxl_36_43.toString(), 
+    r.total.toString()
+  ]);
+
+  doc.autoTable({ 
+    startY: 25, 
+    head: [['Kategori', 'Nama Artikel', 'SKU', 'Tipe', 'S/28/39', 'M/30/40', 'L/32/41', 'XL/34/42', 'XXL/36/43', 'Total']], 
+    body: bodyData 
+  });
+
+  doc.save(`Target_${activeVendorName}.pdf`);
+}
     // INTER-TAB NAVIGATION HELPER
     function lompatKeUpdateManual(kategori, sku, size) {
       if (typeof APP_ROLE_MODE !== "undefined" && APP_ROLE_MODE === "vendor") return;
