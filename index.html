@@ -2028,50 +2028,90 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
     // FUNGSI PENGGERAK POPUP CENTANG BANYAK ARTIKEL (BARU)
     // =========================================================
     function bukaModalPilihArtikel() {
-      if (!activeVendorUser) {
-        Swal.fire('Peringatan', 'Silakan pilih nama vendor terlebih dahulu pada poin 1.', 'warning');
-        return;
-      }
+  if (!activeVendorUser) {
+    Swal.fire('Peringatan', 'Silakan pilih nama vendor terlebih dahulu pada poin 1.', 'warning');
+    return;
+  }
 
-      var filterKat = document.getElementById('filterKategori') ? document.getElementById('filterKategori').value : "Semua";
-      // Gunakan ID elemen status filter tipe stok Anda (monStatus atau filterTipe)
-      var filterTipeEl = document.getElementById('monStatus') || document.getElementById('filterTipe');
-      var filterTipe = filterTipeEl ? filterTipeEl.value : "Semua";
+  var selectKatEl = document.getElementById('monKategori');
+  var selectedKatPoin2 = selectKatEl ? selectKatEl.value : "";
 
-      var uniqueArticlesMap = {};
-      globalData.forEach(item => {
-        var cocokKat = (filterKat === "Semua" || item.kategori === filterKat);
-        var cocokTipe = (filterTipe === "Semua" || item.status === filterTipe);
-        if (cocokKat && cocokTipe) {
-          uniqueArticlesMap[item.sku] = { kategori: item.kategori, nama: item.nama, sku: item.sku };
-        }
-      });
+  var searchModalInput = document.getElementById('searchModalArtikelText');
+  if (searchModalInput) searchModalInput.value = "";
 
-      var tbody = document.getElementById('tbodyModalArtikel');
-      var html = "";
-      var listUnique = Object.values(uniqueArticlesMap);
+  var filterTipeEl = document.getElementById('monStatus') || document.getElementById('filterTipe');
+  var filterTipe = filterTipeEl ? filterTipeEl.value : "Semua";
 
-      if (listUnique.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="text-muted py-4">Tidak ada artikel yang cocok dengan filter kategori/tipe stok saat ini.</td></tr>`;
-      } else {
-        listUnique.forEach(art => {
-          var sudahAda = (globalKotretanDbMap[activeVendorUser] || []).includes(art.sku);
-          var checkedStr = sudahAda ? "checked disabled" : "";
-          var textMutedClass = sudahAda ? "class='table-light text-muted'" : "";
+  var uniqueArticlesMap = {};
+  
+  globalData.forEach(item => {
+    // Filter Hak Akses Vendor
+    var punyaAksesVendor = monitorActiveAksesKategori.includes(item.kategori);
 
-          html += `<tr ${textMutedClass}>
-            <td><input type="checkbox" class="form-check-input check-artikel-item" value="${art.sku}" ${checkedStr}></td>
-            <td class="fw-bold text-uppercase">${art.kategori}</td>
-            <td class="text-start">${art.nama}</td>
-            <td class="font-monospace text-primary fw-bold">${art.sku}</td>
-          </tr>`;
-        });
-        tbody.innerHTML = html;
-      }
+    // Filter Kategori Poin 2
+    var cocokKategoriPoin2 = (selectedKatPoin2 === "" || selectedKatPoin2 === "Semua") 
+      ? punyaAksesVendor 
+      : (item.kategori === selectedKatPoin2);
 
-      var myModal = new bootstrap.Modal(document.getElementById('modalPilihArtikel'));
-      myModal.show();
+    // Filter Tipe Stok (Real / Fake)
+    var cocokTipe = (filterTipe === "Semua" || item.status === filterTipe);
+
+    if (punyaAksesVendor && cocokKategoriPoin2 && cocokTipe) {
+      uniqueArticlesMap[item.sku] = { 
+        kategori: item.kategori, 
+        nama: item.nama, 
+        sku: item.sku 
+      };
     }
+  });
+
+  var listUnique = Object.values(uniqueArticlesMap);
+  renderRowsModalArtikel(listUnique);
+
+  var myModal = new bootstrap.Modal(document.getElementById('modalPilihArtikel'));
+  myModal.show();
+}
+
+// 2. SISIPKAN 2 FUNGSI BANTUAN BARU INI DI SINI
+function renderRowsModalArtikel(listData) {
+  var tbody = document.getElementById('tbodyModalArtikel');
+  if (!tbody) return;
+
+  if (listData.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-muted py-4">Tidak ada artikel yang cocok dengan kategori/akses vendor saat ini.</td></tr>`;
+    return;
+  }
+
+  var html = "";
+  listData.forEach(art => {
+    var sudahAda = (globalKotretanDbMap[activeVendorUser] || []).includes(art.sku);
+    var checkedStr = sudahAda ? "checked disabled" : "";
+    var textMutedClass = sudahAda ? "class='table-light text-muted'" : "";
+
+    html += `<tr ${textMutedClass} class="row-modal-item" data-nama="${art.nama.toLowerCase()}" data-sku="${art.sku.toLowerCase()}">
+      <td><input type="checkbox" class="form-check-input check-artikel-item" value="${art.sku}" ${checkedStr}></td>
+      <td class="fw-bold text-uppercase">${art.kategori}</td>
+      <td class="text-start">${art.nama}</td>
+      <td class="font-monospace text-primary fw-bold">${art.sku}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function filterTabelModalArtikel() {
+  var keyword = (document.getElementById('searchModalArtikelText')?.value || "").toLowerCase().trim();
+  var rows = document.querySelectorAll('#tbodyModalArtikel tr.row-modal-item');
+
+  rows.forEach(row => {
+    var nama = row.getAttribute('data-nama') || "";
+    var sku = row.getAttribute('data-sku') || "";
+    if (keyword === "" || nama.includes(keyword) || sku.includes(keyword)) {
+      row.style.display = "";
+    } else {
+      row.style.display = "none";
+    }
+  });
+}
 
     let statusCentangSemua = false;
     function toggleSemuaCentang(btnNode) {
@@ -2113,12 +2153,21 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body bg-light">
+        
+        <div class="mb-3">
+          <div class="input-group input-group-sm">
+            <span class="input-group-text bg-white border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+            <input type="text" id="searchModalArtikelText" class="form-control border-start-0" placeholder="Cari nama artikel atau SKU di sini..." onkeyup="filterTabelModalArtikel()">
+          </div>
+        </div>
+
         <div class="d-flex justify-content-between align-items-center mb-3">
           <small class="text-muted">Centang artikel yang ingin dimasukkan ke dalam tabel workspace.</small>
           <button type="button" class="btn btn-xs btn-outline-secondary btn-sm" onclick="toggleSemuaCentang(this)">
             <i class="fa-solid fa-check-double me-1"></i> Centang Semua
           </button>
         </div>
+
         <div class="table-responsive">
           <table class="table table-hover table-bordered bg-white align-middle text-center small">
             <thead class="table-dark">
@@ -2130,7 +2179,7 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
               </tr>
             </thead>
             <tbody id="tbodyModalArtikel">
-              </tbody>
+            </tbody>
           </table>
         </div>
       </div>
@@ -2142,6 +2191,6 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
       </div>
     </div>
   </div>
-</div> 
+</div>
 </body>
 </html>
