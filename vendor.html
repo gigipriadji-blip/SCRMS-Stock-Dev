@@ -290,7 +290,7 @@
         var adaSizeKritis = false; var sizeBoxesHtml = ""; var limitBatasKritis = Math.ceil(art.adsGlobal * vendorBufferDays);
         var totalStokArtikel = 0; art.sizes.forEach(s => totalStokArtikel += parseInt(s.qty) || 0);
         
-        var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "Non", "ALL SIZE"];
+        var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "36" , "39", "40", "41", "42", "43" , "Non", "ALL SIZE"];
         art.sizes.sort((a, b) => (urutanBaku.indexOf(a.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(a.size.toUpperCase())) - (urutanBaku.indexOf(b.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(b.size.toUpperCase())));
         
         art.sizes.forEach(function(sz) {
