@@ -2190,51 +2190,59 @@ function sortArticlesBySku(listData) {
 
   return listData.sort((a, b) => {
     const parseSKU = (skuStr) => {
-      if (!skuStr) return { prefixOrder: 9, charCode: '', numCode: 0, raw: '' };
+      if (!skuStr) return { prefix: '', charCode: '', numCode: 0, hasDash: false };
       
-      let str = skuStr.toUpperCase().trim();
-      let prefixOrder = 1; // Default: Tanpa prefiks (Paling Atas)
-      
-      if (str.startsWith('HN-')) {
-        prefixOrder = 2;
-        str = str.replace('HN-', '');
-      } else if (str.startsWith('IN-')) {
-        prefixOrder = 3;
-        str = str.replace('IN-', '');
-      } else if (str.includes('-')) {
-        prefixOrder = 4; // Prefiks lain jika ada
+      let rawStr = skuStr.toUpperCase().trim();
+      let prefix = "";
+      let remainder = rawStr;
+
+      // 1. Cek apakah ada dash '-' untuk memisahkan Prefiks Utama (e.g., HN-TSRT-...)
+      // Kita ambil bagian sebelum tanda strip pertama sebagai prefiks awal
+      if (rawStr.includes('-')) {
+        let parts = rawStr.split('-');
+        
+        // Kasus standar distro: HN-TSRT-J104B -> parts[0] = HN, parts[1] = TSRT
+        // Jika parts[0] panjangnya pendek (2-3 huruf seperti HN, IN, GN, JN), itu adalah Prefiks Utama
+        if (parts[0].length <= 3) {
+          prefix = parts[0];
+          // Sisa string yang akan dibedah alfabet & angkanya (e.g., TSRT-J104B)
+          remainder = parts.slice(1).join('-'); 
+        }
       }
 
-      // Ambil abjad dan angka setelah kategori (misal dari TSRT-G41B -> G dan 41)
-      const match = str.match(/([A-Z]+)(\d+)/);
+      // 2. Cari Huruf Seri dan Angka di dalam sisa string (e.g., J104 dari TSRT-J104B)
+      const match = remainder.match(/([A-Z]+)(\d+)/);
       const charCode = match ? match[1] : '';
       const numCode = match ? parseInt(match[2], 10) : 0;
 
-      return { prefixOrder, charCode, numCode, raw: skuStr };
+      // Kategori Prioritas Prefiks: Tanpa Prefiks dipaksa paling atas (diberi teks kosong)
+      // Sisanya (GN, HN, IN, JN) akan diurutkan murni sesuai abjad alfabet
+      return { prefix, charCode, numCode };
     };
 
     const parsedA = parseSKU(a.sku || a.SKU || '');
     const parsedB = parseSKU(b.sku || b.SKU || '');
 
-    // 1. Urutkan berdasarkan Prefiks (Tanpa Prefiks -> HN -> IN)
-    if (parsedA.prefixOrder !== parsedB.prefixOrder) {
-      return parsedA.prefixOrder - parsedB.prefixOrder;
+    // KONDISI 1: Urutkan berdasarkan Prefiks Depan (Tanpa Prefiks -> GN -> HN -> IN -> JN)
+    // String kosong "" secara otomatis akan berada di paling atas dibanding huruf lain
+    if (parsedA.prefix !== parsedB.prefix) {
+      return parsedA.prefix.localeCompare(parsedB.prefix);
     }
 
-    // 2. Urutkan berdasarkan Huruf Seri (G -> J -> K)
+    // KONDISI 2: Urutkan berdasarkan Huruf Seri setelah Kategori (e.g., G -> H -> J -> K)
     if (parsedA.charCode !== parsedB.charCode) {
       return parsedA.charCode.localeCompare(parsedB.charCode);
     }
 
-    // 3. Urutkan berdasarkan Nomor Seri Angka (41 -> 103 -> 104)
+    // KONDISI 3: Urutkan berdasarkan Nomor Seri Angka secara Numerik (e.g., 44 -> 56 -> 104)
     if (parsedA.numCode !== parsedB.numCode) {
       return parsedA.numCode - parsedB.numCode;
     }
 
-    // 4. Jika sama, urutkan berdasarkan string SKU asli
-    return parsedA.raw.localeCompare(parsedB.raw);
+    // KONDISI 4: Jika identik, kembalikan ke urutan teks asli SKU
+    return (a.sku || '').localeCompare(b.sku || '');
   });
-}   
+}
   </script>
        <div class="modal fade" id="modalPilihArtikel" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
