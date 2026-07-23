@@ -245,7 +245,7 @@
   var filterPrioChecked = document.getElementById('filterPrioOnly') ? document.getElementById('filterPrioOnly').checked : false;
   var filterTipeStok = document.getElementById('filterTipeStok') ? document.getElementById('filterTipeStok').value : "Semua";
   
-  // 1. Ekstrak SKU unik yang aktif dan sesuai filter pencarian/kategori terlebih dahulu
+  // 1. Ekstrak SKU unik yang aktif dan sesuai filter terlebih dahulu
   var uniqueSkuMap = {};
   globalData.forEach(function(item) {
     if(item.kategori !== activeCategory || item.isAktif !== "Aktif") return;
@@ -265,10 +265,12 @@
       };
     }
     
+    // SOLUSI BUG WARNA: Tetap kita amankan agar tidak blank (-)
     if ((uniqueSkuMap[item.sku].warna === "-" || uniqueSkuMap[item.sku].warna === "") && item.warna) {
       uniqueSkuMap[item.sku].warna = item.warna;
     }
 
+    // SOLUSI BUG TIMESTAMP: Tetap ambil waktu terbaru
     if (item.timestamp && item.timestamp !== "-") {
       var currentSavedTime = new Date(uniqueSkuMap[item.sku].timestamp.replace(/-/g, '/'));
       var newIncomingTime = new Date(item.timestamp.replace(/-/g, '/'));
@@ -280,9 +282,13 @@
     uniqueSkuMap[item.sku].sizes.push({ size: item.size, qty: item.qty, tren: item.tren });
   });
 
-  // 2. Ubah ke Array lalu PAKSA SORTING menggunakan rumus kustom anti-anomali
+  // ==========================================
+  // 📍 2. UBAH KE ARRAY & PAKSA SORTING SKU DI SINI 📍
+  // ==========================================
   var articlesList = Object.values(uniqueSkuMap);
-  articlesList = sortArticlesBySku(articlesList);
+  if (typeof sortArticlesBySku === "function") {
+    articlesList = sortArticlesBySku(articlesList);
+  }
 
   // 3. Render HTML dari list yang sudah terurut sempurna
   var html = "";
@@ -303,6 +309,7 @@
       sizeBoxesHtml += `<div class="size-box ${isSizeKritis ? 'box-kurang' : ''}"><div class="size-name">${sz.size}</div><div class="size-qty">${sz.qty}${trendIcon}</div></div>`;
     });
 
+    // PAKSA FORMAT AKHIR KE ZONA WAKTU INDONESIA (WIB) AGAR TIDAK NGACO JAMNYA
     var displayTime = art.timestamp;
     try {
       if(art.timestamp && art.timestamp !== "-") {
@@ -324,7 +331,6 @@
       <div class="d-flex justify-content-end align-items-center mt-3 pt-2 border-top border-light"><div class="text-muted text-xs"><i class="fa-regular fa-clock me-1"></i>Update: ${displayTime}</div></div>
     </div>`;
   });
-  
   container.innerHTML = html === "" ? "<div class='text-center py-5 text-muted'><i class='fa-solid fa-box-open fa-2x mb-2'></i><br>Tidak ada artikel cocok dengan filter.</div>" : html;
 }
     function filterDisplay() {
