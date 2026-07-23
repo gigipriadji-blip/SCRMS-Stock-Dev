@@ -238,21 +238,21 @@
     
     function switchCategory(cat) { activeCategory = cat; buildCategoryTabs(listKategoriGlobal); }
 
-    function renderCards() {
+ function renderCards() {
   var container = document.getElementById('articlesContainer'); if(!container) return;
   var keyword = document.getElementById('searchArt') ? document.getElementById('searchArt').value.toLowerCase().trim() : "";
   var vendorBufferDays = GLOBAL_VENDOR_BUFFER;
   var filterPrioChecked = document.getElementById('filterPrioOnly') ? document.getElementById('filterPrioOnly').checked : false;
   var filterTipeStok = document.getElementById('filterTipeStok') ? document.getElementById('filterTipeStok').value : "Semua";
-  var grouped = {};
   
+  // 1. Ekstrak SKU unik yang aktif dan sesuai filter pencarian/kategori terlebih dahulu
+  var uniqueSkuMap = {};
   globalData.forEach(function(item) {
     if(item.kategori !== activeCategory || item.isAktif !== "Aktif") return;
     if(keyword !== "" && !item.sku.toLowerCase().includes(keyword) && !item.nama.toLowerCase().includes(keyword)) return;
     
-    // JIKA SKU BELUM ADA DI DAFTAR GROUP, INISIALISASI DATA AWAL
-    if(!grouped[item.sku]) {
-      grouped[item.sku] = { 
+    if(!uniqueSkuMap[item.sku]) {
+      uniqueSkuMap[item.sku] = {
         sku: item.sku, 
         nama: item.nama, 
         kategori: item.kategori, 
@@ -265,36 +265,31 @@
       };
     }
     
-    // SOLUSI BUG WARNA: Jika baris data berikutnya punya warna valid, amankan agar tidak blank (-)
-    if ((grouped[item.sku].warna === "-" || grouped[item.sku].warna === "") && item.warna) {
-      grouped[item.sku].warna = item.warna;
+    if ((uniqueSkuMap[item.sku].warna === "-" || uniqueSkuMap[item.sku].warna === "") && item.warna) {
+      uniqueSkuMap[item.sku].warna = item.warna;
     }
 
-    // SOLUSI BUG TIMESTAMP: Bandingkan semua size, ambil waktu yang paling terbaru (paling muda)
     if (item.timestamp && item.timestamp !== "-") {
-      var currentSavedTime = new Date(grouped[item.sku].timestamp.replace(/-/g, '/'));
+      var currentSavedTime = new Date(uniqueSkuMap[item.sku].timestamp.replace(/-/g, '/'));
       var newIncomingTime = new Date(item.timestamp.replace(/-/g, '/'));
-      
       if (isNaN(currentSavedTime.getTime()) || newIncomingTime > currentSavedTime) {
-        grouped[item.sku].timestamp = item.timestamp;
+        uniqueSkuMap[item.sku].timestamp = item.timestamp;
       }
     }
     
-    grouped[item.sku].sizes.push({ size: item.size, qty: item.qty, tren: item.tren });
+    uniqueSkuMap[item.sku].sizes.push({ size: item.size, qty: item.qty, tren: item.tren });
   });
 
-  // ==========================================
-  // 📍 1. UBAH OBJECT MENJADI ARRAY & PROSES SORTING SKU DI SINI 📍
-  // ==========================================
-  var articlesList = Object.values(grouped);
-  if (typeof sortArticlesBySku === "function") {
-    articlesList = sortArticlesBySku(articlesList);
-  }
+  // 2. Ubah ke Array lalu PAKSA SORTING menggunakan rumus kustom anti-anomali
+  var articlesList = Object.values(uniqueSkuMap);
+  articlesList = sortArticlesBySku(articlesList);
 
+  // 3. Render HTML dari list yang sudah terurut sempurna
   var html = "";
-  // Looping diganti menggunakan articlesList yang sudah terurut kustom
   articlesList.forEach(function(art) {
-    if (filterPrioChecked && !art.isPriority) return; if (filterTipeStok !== "Semua" && art.status !== filterTipeStok) return;
+    if (filterPrioChecked && !art.isPriority) return; 
+    if (filterTipeStok !== "Semua" && art.status !== filterTipeStok) return;
+    
     var badgeClass = art.status.toLowerCase().includes('fake') ? 'badge-fake' : 'badge-real';
     var adaSizeKritis = false; var sizeBoxesHtml = ""; var limitBatasKritis = Math.ceil(art.adsGlobal * vendorBufferDays);
     var totalStokArtikel = 0; art.sizes.forEach(s => totalStokArtikel += parseInt(s.qty) || 0);
@@ -308,7 +303,6 @@
       sizeBoxesHtml += `<div class="size-box ${isSizeKritis ? 'box-kurang' : ''}"><div class="size-name">${sz.size}</div><div class="size-qty">${sz.qty}${trendIcon}</div></div>`;
     });
 
-    // PAKSA FORMAT AKHIR KE ZONA WAKTU INDONESIA (WIB) AGAR TIDAK NGACO JAMNYA
     var displayTime = art.timestamp;
     try {
       if(art.timestamp && art.timestamp !== "-") {
@@ -330,9 +324,9 @@
       <div class="d-flex justify-content-end align-items-center mt-3 pt-2 border-top border-light"><div class="text-muted text-xs"><i class="fa-regular fa-clock me-1"></i>Update: ${displayTime}</div></div>
     </div>`;
   });
+  
   container.innerHTML = html === "" ? "<div class='text-center py-5 text-muted'><i class='fa-solid fa-box-open fa-2x mb-2'></i><br>Tidak ada artikel cocok dengan filter.</div>" : html;
 }
-
     function filterDisplay() {
       var input = document.getElementById('searchArt'); var btn = document.getElementById('btnClearSearchArt');
       if (btn) { if (input && input.value.trim() !== "") btn.style.setProperty('display', 'block', 'important'); else btn.style.setProperty('display', 'none', 'important'); }
