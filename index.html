@@ -1143,22 +1143,63 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
   document.getElementById('heroCountTotal').innerText = countTotal; document.getElementById('heroCountAman').innerText = countAman; document.getElementById('heroCountKritis').innerText = countKritis;
 }
     function getFilteredHeroData() {
-      var searchHero = document.getElementById('searchHero') ? document.getElementById('searchHero').value.toLowerCase() : "";
+      var searchHero = document.getElementById('searchHero') ? document.getElementById('searchHero').value.toLowerCase().trim() : "";
       var katFilterHero = document.getElementById('filterKategoriHero') ? document.getElementById('filterKategoriHero').value : "";
       var targetHari = parseFloat(document.getElementById('inputBufferHero') ? document.getElementById('inputBufferHero').value : 14) || 14;
+      
       var groupedData = {};
       globalData.forEach(function(item) {
         if (!item) return;
-        if (!groupedData[item.sku]) groupedData[item.sku] = { kategori: item.kategori, sku: item.sku, nama: item.nama, warna: item.warna, isAktif: item.isAktif, adsGlobal: parseFloat(item.adsGlobal) || 0, totalQty: 0 };
-        groupedData[item.sku].totalQty += parseInt(item.qty) || 0;
+        var sku = item.sku;
+        if (!groupedData[sku]) {
+          groupedData[sku] = { 
+            kategori: item.kategori, 
+            sku: sku, 
+            nama: item.nama, 
+            warna: item.warna || "-", 
+            isAktif: item.isAktif, 
+            adsGlobal: parseFloat(item.adsGlobal) || 0, 
+            totalQty: 0 
+          };
+        }
+        groupedData[sku].totalQty += parseInt(item.qty) || 0;
       });
-      return Object.values(groupedData).filter(function(item) {
-        return (item.isAktif === "Aktif" && item.adsGlobal > 0) && (item.nama.toLowerCase().includes(searchHero) || item.sku.toLowerCase().includes(searchHero)) && (katFilterHero === "" || item.kategori === katFilterHero);
-      }).map(function(art) {
+
+      // 1. Saring artikel aktif yang memiliki ADS > 0 & sesuai kata kunci/filter
+      var heroArticles = Object.values(groupedData).filter(function(item) {
+        return (item.isAktif === "Aktif" && item.adsGlobal > 0) && 
+               (item.nama.toLowerCase().includes(searchHero) || item.sku.toLowerCase().includes(searchHero)) && 
+               (katFilterHero === "" || item.kategori === katFilterHero);
+      });
+
+      // 2. Kelompokkan berdasarkan Kategori
+      var groupedByCategory = {};
+      heroArticles.forEach(function(art) {
+        if (!groupedByCategory[art.kategori]) groupedByCategory[art.kategori] = [];
+        groupedByCategory[art.kategori].push(art);
+      });
+
+      // 3. Urutkan SKU di tiap kategori menggunakan sortArticlesBySku
+      var finalSortedList = [];
+      Object.keys(groupedByCategory).sort().forEach(function(kategori) {
+        var sortedInCat = groupedByCategory[kategori];
+        if (typeof sortArticlesBySku === "function") {
+          sortedInCat = sortArticlesBySku(sortedInCat);
+        }
+        finalSortedList = finalSortedList.concat(sortedInCat);
+      });
+
+      // 4. Hitung Estimasi Hari & Selisih untuk output Laporan
+      return finalSortedList.map(function(art) {
         var estimasiHari = art.adsGlobal > 0 ? Math.floor(art.totalQty / art.adsGlobal) : 0;
         var isKritis = estimasiHari < targetHari;
-        return { ...art, estimasiHari, isKritis, selisih: art.totalQty - (art.adsGlobal * targetHari) };
-      }).sort((a, b) => a.kategori.localeCompare(b.kategori));
+        return { 
+          ...art, 
+          estimasiHari: estimasiHari, 
+          isKritis: isKritis, 
+          selisih: art.totalQty - (art.adsGlobal * targetHari) 
+        };
+      });
     }
     function exportHeroToExcel() {
       var data = getFilteredHeroData(); if(data.length === 0) { Swal.fire('Tabel Kosong', 'Tidak ada data Hero untuk diexport.', 'warning'); return; }
