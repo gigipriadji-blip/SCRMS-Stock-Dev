@@ -2351,6 +2351,24 @@ function sortArticlesBySku(listData) {
     return (a.sku || '').localeCompare(b.sku || '');
   });
 }
+   // pemantau scroll & pengeksekusi smooth scroll
+window.addEventListener('scroll', function() {
+  var btnBackToTop = document.getElementById('btnBackToTop');
+  if (btnBackToTop) {
+    if (window.scrollY > 300) {
+      btnBackToTop.classList.remove('d-none');
+    } else {
+      btnBackToTop.classList.add('d-none');
+    }
+  }
+});
+
+function scrollToTop() {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  });
+} 
   </script>
        <div class="modal fade" id="modalPilihArtikel" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -2399,5 +2417,10 @@ function sortArticlesBySku(listData) {
     </div>
   </div>
 </div>
+  
+ <button id="btnBackToTop" onclick="scrollToTop()" class="btn btn-dark rounded-circle shadow-lg d-none" style="position: fixed; bottom: 25px; right: 25px; width: 48px; height: 48px; z-index: 1050; border: 2px solid #fff; transition: all 0.3s ease;">
+  <i class="fa-solid fa-arrow-up"></i>
+</button> 
+  
 </body>
 </html>
