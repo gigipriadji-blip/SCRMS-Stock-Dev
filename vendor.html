@@ -344,6 +344,50 @@
       var btn = document.getElementById('btnClearSearchArt'); if (btn) btn.style.setProperty('display', 'none', 'important');
       renderCards();
     }
+    // =======================================================
+    // 📍 MASUKKAN KODE PEMBANTU YANG HILANG INI DI SINI 📍
+    // =======================================================
+    function sortArticlesBySku(listData) {
+      if (!Array.isArray(listData)) return listData;
+
+      return listData.sort((a, b) => {
+        const parseSKU = (skuStr) => {
+          if (!skuStr) return { prefix: '', charCode: '', numCode: 0 };
+          
+          let rawStr = skuStr.toUpperCase().trim();
+          let prefix = "";
+          let remainder = rawStr;
+
+          if (rawStr.includes('-')) {
+            let parts = rawStr.split('-');
+            if (parts[0].length <= 3) {
+              prefix = parts[0];
+              remainder = parts.slice(1).join('-'); 
+            }
+          }
+
+          const match = remainder.match(/([A-Z]+)(\d+)/);
+          const charCode = match ? match[1] : '';
+          const numCode = match ? parseInt(match[2], 10) : 0;
+
+          return { prefix, charCode, numCode };
+        };
+
+        const parsedA = parseSKU(a.sku || a.SKU || '');
+        const parsedB = parseSKU(b.sku || b.SKU || '');
+
+        if (parsedA.prefix !== parsedB.prefix) {
+          return parsedA.prefix.localeCompare(parsedB.prefix);
+        }
+        if (parsedA.charCode !== parsedB.charCode) {
+          return parsedA.charCode.localeCompare(parsedB.charCode);
+        }
+        if (parsedA.numCode !== parsedB.numCode) {
+          return parsedA.numCode - parsedB.numCode;
+        }
+        return (a.sku || '').localeCompare(b.sku || '');
+      });
+    }
   </script>
 </body>
 </html>
