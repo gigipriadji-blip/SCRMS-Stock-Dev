@@ -239,90 +239,99 @@
     function switchCategory(cat) { activeCategory = cat; buildCategoryTabs(listKategoriGlobal); }
 
     function renderCards() {
-      var container = document.getElementById('articlesContainer'); if(!container) return;
-      var keyword = document.getElementById('searchArt') ? document.getElementById('searchArt').value.toLowerCase().trim() : "";
-      var vendorBufferDays = GLOBAL_VENDOR_BUFFER;
-      var filterPrioChecked = document.getElementById('filterPrioOnly') ? document.getElementById('filterPrioOnly').checked : false;
-      var filterTipeStok = document.getElementById('filterTipeStok') ? document.getElementById('filterTipeStok').value : "Semua";
-      var grouped = {};
-      
-      globalData.forEach(function(item) {
-        if(item.kategori !== activeCategory || item.isAktif !== "Aktif") return;
-        if(keyword !== "" && !item.sku.toLowerCase().includes(keyword) && !item.nama.toLowerCase().includes(keyword)) return;
-        
-        // JIKA SKU BELUM ADA DI DAFTAR GROUP, INISIALISASI DATA AWAL
-        if(!grouped[item.sku]) {
-          grouped[item.sku] = { 
-            sku: item.sku, 
-            nama: item.nama, 
-            kategori: item.kategori, 
-            warna: item.warna || "-", 
-            status: item.status, 
-            adsGlobal: item.adsGlobal, 
-            timestamp: item.timestamp, 
-            isPriority: item.isPriority, 
-            sizes: [] 
-          };
-        }
-        
-        // SOLUSI BUG WARNA: Jika baris data berikutnya punya warna valid, amankan agar tidak blank (-)
-        if ((grouped[item.sku].warna === "-" || grouped[item.sku].warna === "") && item.warna) {
-          grouped[item.sku].warna = item.warna;
-        }
-
-        // SOLUSI BUG TIMESTAMP: Bandingkan semua size, ambil waktu yang paling terbaru (paling muda)
-        if (item.timestamp && item.timestamp !== "-") {
-          var currentSavedTime = new Date(grouped[item.sku].timestamp.replace(/-/g, '/'));
-          var newIncomingTime = new Date(item.timestamp.replace(/-/g, '/'));
-          
-          if (isNaN(currentSavedTime.getTime()) || newIncomingTime > currentSavedTime) {
-            grouped[item.sku].timestamp = item.timestamp;
-          }
-        }
-        
-        grouped[item.sku].sizes.push({ size: item.size, qty: item.qty, tren: item.tren });
-      });
-
-      var html = "";
-      Object.keys(grouped).forEach(function(key) {
-        var art = grouped[key]; if (filterPrioChecked && !art.isPriority) return; if (filterTipeStok !== "Semua" && art.status !== filterTipeStok) return;
-        var badgeClass = art.status.toLowerCase().includes('fake') ? 'badge-fake' : 'badge-real';
-        var adaSizeKritis = false; var sizeBoxesHtml = ""; var limitBatasKritis = Math.ceil(art.adsGlobal * vendorBufferDays);
-        var totalStokArtikel = 0; art.sizes.forEach(s => totalStokArtikel += parseInt(s.qty) || 0);
-        
-        var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "36" , "39", "40", "41", "42", "43" , "Non", "ALL SIZE"];
-        art.sizes.sort((a, b) => (urutanBaku.indexOf(a.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(a.size.toUpperCase())) - (urutanBaku.indexOf(b.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(b.size.toUpperCase())));
-        
-        art.sizes.forEach(function(sz) {
-          var isSizeKritis = sz.qty <= limitBatasKritis; if(isSizeKritis) adaSizeKritis = true;
-          var trendIcon = sz.tren === '▲' ? '<i class="fa-solid fa-arrow-trend-up trend-up ms-1"></i>' : (sz.tren === '▼' ? '<i class="fa-solid fa-arrow-trend-down trend-down ms-1"></i>' : '');
-          sizeBoxesHtml += `<div class="size-box ${isSizeKritis ? 'box-kurang' : ''}"><div class="size-name">${sz.size}</div><div class="size-qty">${sz.qty}${trendIcon}</div></div>`;
-        });
-
-        // PAKSA FORMAT AKHIR KE ZONA WAKTU INDONESIA (WIB) AGAR TIDAK NGACO JAMNYA
-        var displayTime = art.timestamp;
-        try {
-          if(art.timestamp && art.timestamp !== "-") {
-            var parsedDate = new Date(art.timestamp.replace(/-/g, '/'));
-            if(!isNaN(parsedDate.getTime())) {
-              displayTime = parsedDate.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
-            }
-          }
-        } catch(e) {
-          console.log("Gagal melakukan format zona waktu lokal");
-        }
-
-        html += `<div class="article-card ${adaSizeKritis ? 'card-kurang' : ''} ${art.isPriority ? 'border border-warning border-3 bg-light' : ''}">
-          <div class="d-flex justify-content-between align-items-start">
-            <div><span class="sku-text">${art.sku}</span><div class="article-title">${art.nama}</div><span class="text-muted small"><i class="fa-solid fa-palette me-1"></i> WRNA: ${art.warna}</span></div>
-            <div class="text-end">${art.isPriority ? '<span class="badge bg-warning text-dark mb-1 me-2"><i class="fa-solid fa-star me-1"></i>PRIORITAS</span>' : ''}<span class="badge ${badgeClass} mb-1">${art.status}</span><div class="text-muted text-xs mt-1">TOTAL STOK: <strong class="text-primary">${totalStokArtikel}</strong></div></div>
-          </div>
-          <div class="size-container mt-3">${sizeBoxesHtml}</div>
-          <div class="d-flex justify-content-end align-items-center mt-3 pt-2 border-top border-light"><div class="text-muted text-xs"><i class="fa-regular fa-clock me-1"></i>Update: ${displayTime}</div></div>
-        </div>`;
-      });
-      container.innerHTML = html === "" ? "<div class='text-center py-5 text-muted'><i class='fa-solid fa-box-open fa-2x mb-2'></i><br>Tidak ada artikel cocok dengan filter.</div>" : html;
+  var container = document.getElementById('articlesContainer'); if(!container) return;
+  var keyword = document.getElementById('searchArt') ? document.getElementById('searchArt').value.toLowerCase().trim() : "";
+  var vendorBufferDays = GLOBAL_VENDOR_BUFFER;
+  var filterPrioChecked = document.getElementById('filterPrioOnly') ? document.getElementById('filterPrioOnly').checked : false;
+  var filterTipeStok = document.getElementById('filterTipeStok') ? document.getElementById('filterTipeStok').value : "Semua";
+  var grouped = {};
+  
+  globalData.forEach(function(item) {
+    if(item.kategori !== activeCategory || item.isAktif !== "Aktif") return;
+    if(keyword !== "" && !item.sku.toLowerCase().includes(keyword) && !item.nama.toLowerCase().includes(keyword)) return;
+    
+    // JIKA SKU BELUM ADA DI DAFTAR GROUP, INISIALISASI DATA AWAL
+    if(!grouped[item.sku]) {
+      grouped[item.sku] = { 
+        sku: item.sku, 
+        nama: item.nama, 
+        kategori: item.kategori, 
+        warna: item.warna || "-", 
+        status: item.status, 
+        adsGlobal: item.adsGlobal, 
+        timestamp: item.timestamp, 
+        isPriority: item.isPriority, 
+        sizes: [] 
+      };
     }
+    
+    // SOLUSI BUG WARNA: Jika baris data berikutnya punya warna valid, amankan agar tidak blank (-)
+    if ((grouped[item.sku].warna === "-" || grouped[item.sku].warna === "") && item.warna) {
+      grouped[item.sku].warna = item.warna;
+    }
+
+    // SOLUSI BUG TIMESTAMP: Bandingkan semua size, ambil waktu yang paling terbaru (paling muda)
+    if (item.timestamp && item.timestamp !== "-") {
+      var currentSavedTime = new Date(grouped[item.sku].timestamp.replace(/-/g, '/'));
+      var newIncomingTime = new Date(item.timestamp.replace(/-/g, '/'));
+      
+      if (isNaN(currentSavedTime.getTime()) || newIncomingTime > currentSavedTime) {
+        grouped[item.sku].timestamp = item.timestamp;
+      }
+    }
+    
+    grouped[item.sku].sizes.push({ size: item.size, qty: item.qty, tren: item.tren });
+  });
+
+  // ==========================================
+  // 📍 1. UBAH OBJECT MENJADI ARRAY & PROSES SORTING SKU DI SINI 📍
+  // ==========================================
+  var articlesList = Object.values(grouped);
+  if (typeof sortArticlesBySku === "function") {
+    articlesList = sortArticlesBySku(articlesList);
+  }
+
+  var html = "";
+  // Looping diganti menggunakan articlesList yang sudah terurut kustom
+  articlesList.forEach(function(art) {
+    if (filterPrioChecked && !art.isPriority) return; if (filterTipeStok !== "Semua" && art.status !== filterTipeStok) return;
+    var badgeClass = art.status.toLowerCase().includes('fake') ? 'badge-fake' : 'badge-real';
+    var adaSizeKritis = false; var sizeBoxesHtml = ""; var limitBatasKritis = Math.ceil(art.adsGlobal * vendorBufferDays);
+    var totalStokArtikel = 0; art.sizes.forEach(s => totalStokArtikel += parseInt(s.qty) || 0);
+    
+    var urutanBaku = ["S", "M", "L", "XL", "XXL", "28", "30", "32", "34", "36" , "39", "40", "41", "42", "43" , "Non", "ALL SIZE"];
+    art.sizes.sort((a, b) => (urutanBaku.indexOf(a.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(a.size.toUpperCase())) - (urutanBaku.indexOf(b.size.toUpperCase()) === -1 ? 999 : urutanBaku.indexOf(b.size.toUpperCase())));
+    
+    art.sizes.forEach(function(sz) {
+      var isSizeKritis = sz.qty <= limitBatasKritis; if(isSizeKritis) adaSizeKritis = true;
+      var trendIcon = sz.tren === '▲' ? '<i class="fa-solid fa-arrow-trend-up trend-up ms-1"></i>' : (sz.tren === '▼' ? '<i class="fa-solid fa-arrow-trend-down trend-down ms-1"></i>' : '');
+      sizeBoxesHtml += `<div class="size-box ${isSizeKritis ? 'box-kurang' : ''}"><div class="size-name">${sz.size}</div><div class="size-qty">${sz.qty}${trendIcon}</div></div>`;
+    });
+
+    // PAKSA FORMAT AKHIR KE ZONA WAKTU INDONESIA (WIB) AGAR TIDAK NGACO JAMNYA
+    var displayTime = art.timestamp;
+    try {
+      if(art.timestamp && art.timestamp !== "-") {
+        var parsedDate = new Date(art.timestamp.replace(/-/g, '/'));
+        if(!isNaN(parsedDate.getTime())) {
+          displayTime = parsedDate.toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' });
+        }
+      }
+    } catch(e) {
+      console.log("Gagal melakukan format zona waktu lokal");
+    }
+
+    html += `<div class="article-card ${adaSizeKritis ? 'card-kurang' : ''} ${art.isPriority ? 'border border-warning border-3 bg-light' : ''}">
+      <div class="d-flex justify-content-between align-items-start">
+        <div><span class="sku-text">${art.sku}</span><div class="article-title">${art.nama}</div><span class="text-muted small"><i class="fa-solid fa-palette me-1"></i> WRNA: ${art.warna}</span></div>
+        <div class="text-end">${art.isPriority ? '<span class="badge bg-warning text-dark mb-1 me-2"><i class="fa-solid fa-star me-1"></i>PRIORITAS</span>' : ''}<span class="badge ${badgeClass} mb-1">${art.status}</span><div class="text-muted text-xs mt-1">TOTAL STOK: <strong class="text-primary">${totalStokArtikel}</strong></div></div>
+      </div>
+      <div class="size-container mt-3">${sizeBoxesHtml}</div>
+      <div class="d-flex justify-content-end align-items-center mt-3 pt-2 border-top border-light"><div class="text-muted text-xs"><i class="fa-regular fa-clock me-1"></i>Update: ${displayTime}</div></div>
+    </div>`;
+  });
+  container.innerHTML = html === "" ? "<div class='text-center py-5 text-muted'><i class='fa-solid fa-box-open fa-2x mb-2'></i><br>Tidak ada artikel cocok dengan filter.</div>" : html;
+}
 
     function filterDisplay() {
       var input = document.getElementById('searchArt'); var btn = document.getElementById('btnClearSearchArt');
