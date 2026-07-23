@@ -1200,36 +1200,72 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
       var vendorBufferDays = GLOBAL_VENDOR_BUFFER;
       var filterPrioChecked = document.getElementById('filterPrioOnly') ? document.getElementById('filterPrioOnly').checked : false;
       var filterTipeStok = document.getElementById('filterTipeStok') ? document.getElementById('filterTipeStok').value : "Semua";
-      var grouped = {};
       
+      // 1. Ekstrak SKU unik yang aktif dan sesuai filter
+      var uniqueSkuMap = {};
       globalData.forEach(function(item) {
         if(item.kategori !== activeCategory || item.isAktif !== "Aktif") return;
         if(keyword !== "" && !item.sku.toLowerCase().includes(keyword) && !item.nama.toLowerCase().includes(keyword)) return;
-        if(!grouped[item.sku]) {
-          grouped[item.sku] = { sku: item.sku, nama: item.nama, kategori: item.kategori, warna: item.warna, status: item.status, adsGlobal: item.adsGlobal, timestamp: item.timestamp, isPriority: item.isPriority, sizes: [] };
+        
+        if(!uniqueSkuMap[item.sku]) {
+          uniqueSkuMap[item.sku] = { 
+            sku: item.sku, 
+            nama: item.nama, 
+            kategori: item.kategori, 
+            warna: item.warna || "-", 
+            status: item.status, 
+            adsGlobal: item.adsGlobal, 
+            timestamp: item.timestamp, 
+            isPriority: item.isPriority, 
+            sizes: [] 
+          };
         }
-        grouped[item.sku].sizes.push({ size: item.size, qty: item.qty, tren: item.tren });
+        
+        // SOLUSI BUG WARNA: Jaga warna agar tidak blank
+        if ((uniqueSkuMap[item.sku].warna === "-" || uniqueSkuMap[item.sku].warna === "") && item.warna) {
+          uniqueSkuMap[item.sku].warna = item.warna;
+        }
+
+        // SOLUSI BUG TIMESTAMP: Ambil timestamp terbaru
+        if (item.timestamp && item.timestamp !== "-") {
+          var currentSavedTime = new Date(uniqueSkuMap[item.sku].timestamp.replace(/-/g, '/'));
+          var newIncomingTime = new Date(item.timestamp.replace(/-/g, '/'));
+          if (isNaN(currentSavedTime.getTime()) || newIncomingTime > currentSavedTime) {
+            uniqueSkuMap[item.sku].timestamp = item.timestamp;
+          }
+        }
+        
+        uniqueSkuMap[item.sku].sizes.push({ size: item.size, qty: item.qty, tren: item.tren });
       });
 
+      // 2. Ubah ke Array lalu PAKSA SORTING menggunakan sortArticlesBySku
+      var articlesList = Object.values(uniqueSkuMap);
+      if (typeof sortArticlesBySku === "function") {
+        articlesList = sortArticlesBySku(articlesList);
+      }
+
+      // 3. Render HTML
       var html = "";
-      Object.keys(grouped).forEach(function(key) {
-        var art = grouped[key]; if (filterPrioChecked && !art.isPriority) return; if (filterTipeStok !== "Semua" && art.status !== filterTipeStok) return;
+      articlesList.forEach(function(art) {
+        if (filterPrioChecked && !art.isPriority) return; 
+        if (filterTipeStok !== "Semua" && art.status !== filterTipeStok) return;
+        
         var badgeClass = art.status.toLowerCase().includes('fake') ? 'badge-fake' : 'badge-real';
         var adaSizeKritis = false; var sizeBoxesHtml = ""; var limitBatasKritis = Math.ceil(art.adsGlobal * vendorBufferDays);
         var totalStokArtikel = 0; art.sizes.forEach(s => totalStokArtikel += parseInt(s.qty) || 0);
         
         var urutanBaku = [
-        "S", "M", "L", "XL", "XXL", "XXXL", 
-        "28", "30", "32", "34", "36", 
-        "39", "40", "41", "42", "43", 
-        "NON", "ALL SIZE"
-    ];
+          "S", "M", "L", "XL", "XXL", "XXXL", 
+          "28", "30", "32", "34", "36", 
+          "39", "40", "41", "42", "43", 
+          "NON", "ALL SIZE"
+        ];
 
-      art.sizes.sort((a, b) => {
-      var idxA = urutanBaku.indexOf(a.size.toUpperCase().trim());
-      var idxB = urutanBaku.indexOf(b.size.toUpperCase().trim());
-    return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
-  });
+        art.sizes.sort((a, b) => {
+          var idxA = urutanBaku.indexOf(a.size.toUpperCase().trim());
+          var idxB = urutanBaku.indexOf(b.size.toUpperCase().trim());
+          return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+        });
         
         art.sizes.forEach(function(sz) {
           var isSizeKritis = sz.qty <= limitBatasKritis; if(isSizeKritis) adaSizeKritis = true;
