@@ -1128,9 +1128,9 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
       var badgeSelisih = selisih < 0 ? `<span class="badge bg-danger ms-3" style="font-size: 0.8rem;"><i class="fa-solid fa-minus me-1"></i>${Math.abs(selisih)} pcs</span>` : `<span class="badge bg-success ms-3" style="font-size: 0.8rem;"><i class="fa-solid fa-plus me-1"></i>+${selisih} pcs</span>`;
       var tglStr = "-", jamStr = "-"; if(art.latestTimestamp && art.latestTimestamp !== "-") { var spl = art.latestTimestamp.split(" "); if(spl.length >= 2) { tglStr = spl[0]; jamStr = spl[1]; } else { tglStr = art.latestTimestamp; } }
 
-   html += `<tr class="${rowClass}">
+  html += `<tr class="${rowClass}">
         <td class="ps-3">
-          <div class="fw-bold fs-6 text-primary text-decoration-underline" style="cursor: pointer;" onclick="bukaPopupDetailSizeHero('${art.sku}')">
+          <div class="fw-bold fs-6 text-dark text-hover-underline" style="cursor: pointer;" onclick="bukaPopupDetailSizeHero('${art.sku}')" title="Klik untuk lihat detail size">
             ${art.nama}
           </div>
           <div class="small text-muted font-monospace">${art.sku}</div>
@@ -2430,7 +2430,7 @@ async function bukaPopupDetailSizeHero(skuTarget) {
     return;
   }
 
-  // 2. Ekstrak nama artikel dan ADS global secara otomatis
+  // 2. Ekstrak nama artikel dan ADS global
   var namaArtikel = matchingSizes[0].nama || skuTarget;
   var adsGlobal = parseFloat(matchingSizes[0].adsGlobal) || 0;
 
@@ -2438,7 +2438,7 @@ async function bukaPopupDetailSizeHero(skuTarget) {
   var targetHariVendor = parseFloat(document.getElementById('inputBufferVendor')?.value || 7) || 7;
   var limitBatasRawan = Math.ceil(adsGlobal * targetHariVendor);
 
-  // 4. Urutkan size berdasarkan urutan baku agar rapi dari S ke XXL atau 28 ke 36
+  // 4. Urutkan size berdasarkan urutan baku
   var urutanBaku = ["S", "M", "L", "XL", "XXL", "XXXL", "28", "30", "32", "34", "36", "39", "40", "41", "42", "43", "NON", "ALL SIZE"];
   matchingSizes.sort((a, b) => {
     var idxA = urutanBaku.indexOf((a.size || "").toUpperCase().trim());
@@ -2446,8 +2446,8 @@ async function bukaPopupDetailSizeHero(skuTarget) {
     return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
   });
 
-  // 5. Bangun baris HTML untuk tabel breakdown di dalam Pop-up
-  var tableRowsHtml = "";
+  // 5. Bangun Tampilan KOTAK/CARD SIZE MENYAMPING (HORIZONTAL)
+  var sizeCardsHtml = "";
   var totalStokKeseluruhan = 0;
 
   matchingSizes.forEach(item => {
@@ -2456,49 +2456,40 @@ async function bukaPopupDetailSizeHero(skuTarget) {
     
     var isSizeRawan = qty <= limitBatasRawan;
     var statusBadge = isSizeRawan 
-      ? `<span class="badge bg-danger text-white fw-bold"><i class="fa-solid fa-triangle-exclamation me-1"></i>RAWAN</span>` 
-      : `<span class="badge bg-success text-white fw-bold"><i class="fa-solid fa-check me-1"></i>AMAN</span>`;
+      ? `<span class="badge bg-danger text-white mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>RAWAN</span>` 
+      : `<span class="badge bg-success text-white mt-1"><i class="fa-solid fa-check me-1"></i>AMAN</span>`;
     
-    var rowBgClass = isSizeRawan ? "table-danger" : "";
+    var cardBorderClass = isSizeRawan ? "border-danger bg-danger-subtle" : "border-secondary-subtle bg-light";
     var trendIcon = item.tren === '▲' ? '<i class="fa-solid fa-arrow-trend-up text-success ms-1"></i>' : (item.tren === '▼' ? '<i class="fa-solid fa-arrow-trend-down text-danger ms-1"></i>' : '');
 
-    tableRowsHtml += `<tr class="${rowBgClass}">
-      <td class="fw-bold fs-5 align-middle">${item.size}</td>
-      <td class="font-monospace fs-5 fw-bold align-middle">${qty} pcs ${trendIcon}</td>
-      <td class="align-middle">${statusBadge}</td>
-    </tr>`;
+    sizeCardsHtml += `
+      <div class="col-auto">
+        <div class="card ${cardBorderClass} text-center shadow-sm" style="min-width: 90px; padding: 8px;">
+          <div class="fw-bold fs-5 text-dark border-bottom pb-1 mb-1">${item.size}</div>
+          <div class="font-monospace fs-5 fw-bold text-dark">${qty} <span class="fs-6 fw-normal text-muted">pcs</span> ${trendIcon}</div>
+          <div>${statusBadge}</div>
+        </div>
+      </div>
+    `;
   });
 
-  // 6. Tampilkan SweetAlert2 Modal
+  // 6. Tampilkan Modal SweetAlert2 Menyamping
   Swal.fire({
-    title: `<div class="text-start border-bottom pb-2" style="font-size: 1.25rem;">Detail Stok Size: <strong class="text-dark">${namaArtikel}</strong><br><span class="text-muted small font-monospace" style="font-size: 0.85rem;">SKU: ${skuTarget}</span></div>`,
+    title: `<div class="text-start border-bottom pb-2" style="font-size: 1.2rem;">Detail Stok Size: <strong class="text-dark">${namaArtikel}</strong><br><span class="text-muted small font-monospace" style="font-size: 0.85rem;">SKU: ${skuTarget}</span></div>`,
     html: `
       <div class="my-2 p-2 bg-light border rounded text-start small text-muted">
         <i class="fa-solid fa-info-circle me-1"></i> Batas Stok Rawan Vendor: <strong>${limitBatasRawan} pcs</strong> / size <br>(Berdasarkan target ADS <strong>${adsGlobal}/hr</strong> x Buffer <strong>${targetHariVendor} hari</strong>).
       </div>
-      <div class="table-responsive" style="max-height: 320px;">
-        <table class="table table-sm table-bordered align-middle text-center mb-0 mt-2">
-          <thead class="table-dark">
-            <tr>
-              <th>Ukuran</th>
-              <th>Sisa Stok</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRowsHtml}
-          </tbody>
-          <tfoot class="table-secondary fw-bold">
-            <tr>
-              <td>TOTAL STOK</td>
-              <td class="fs-5 text-primary">${totalStokKeseluruhan} pcs</td>
-              <td>-</td>
-            </tr>
-          </tfoot>
-        </table>
+      
+      <div class="d-flex flex-wrap gap-2 justify-content-center my-3" style="max-height: 350px; overflow-y: auto;">
+        ${sizeCardsHtml}
+      </div>
+
+      <div class="p-2 bg-secondary-subtle border rounded text-center fw-bold text-dark">
+        TOTAL STOK SELURUH SIZE: <span class="fs-5 text-primary ms-1">${totalStokKeseluruhan} pcs</span>
       </div>
     `,
-    width: '480px',
+    width: '600px', // Lebar modal diperluas agar muat banyak size menyamping
     confirmButtonText: '<i class="fa-solid fa-xmark me-1"></i> Tutup',
     confirmButtonColor: '#4b5563'
   });
