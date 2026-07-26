@@ -1118,8 +1118,8 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
       var isKritis = estimasiHari < targetHari; if(isKritis) countKritis++; else countAman++;
       var targetStokAman = curAds * targetHari; var selisih = curQty - targetStokAman;
       var rowClass = isKritis ? 'row-hero-kritis' : 'row-hero-aman';
-      var textStyle = isKritis ? 'kritis-text' : 'fw-bold text-success';
-      var iconStatus = isKritis ? '<i class="fa-solid fa-triangle-exclamation text-danger"></i> Kritis' : '<i class="fa-solid fa-check-circle text-success"></i> Aman';
+     var textStyle = isKritis ? 'text-danger fw-bold' : 'fw-bold text-success';
+     var iconStatus = isKritis ? '<i class="fa-solid fa-triangle-exclamation text-danger"></i> Rawan' : '<i class="fa-solid fa-check-circle text-success"></i> Aman';
       var trendIcon = '';
       if(art.sizes && Array.isArray(art.sizes)) {
         if(art.sizes.some(s => s.tren === '▲') && !art.sizes.some(s => s.tren === '▼')) trendIcon = '<i class="fa-solid fa-arrow-trend-up text-success ms-2 fs-5"></i>';
@@ -1204,14 +1204,14 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
     function exportHeroToExcel() {
       var data = getFilteredHeroData(); if(data.length === 0) { Swal.fire('Tabel Kosong', 'Tidak ada data Hero untuk diexport.', 'warning'); return; }
       var wsData = [["LAPORAN MONITORING ARTIKEL HERO - SCREAMOUS"],["TANGGAL:", new Date().toLocaleDateString('id-ID')],[],["KATEGORI", "NAMA ARTIKEL", "SKU", "WARNA", "TOTAL STOK", "ADS GLOBAL", "ESTIMASI KETAHANAN", "SELISIH STOK", "STATUS"]];
-      data.forEach(r => wsData.push([r.kategori, r.nama, r.sku, r.warna, r.totalQty, r.adsGlobal, r.estimasiHari + " Hari", r.selisih, r.isKritis ? "Kritis" : "Aman"]));
+      data.forEach(r => wsData.push([r.kategori, r.nama, r.sku, r.warna, r.totalQty, r.adsGlobal, r.estimasiHari + " Hari", r.selisih, r.isKritis ? "Rawan" : "Aman"]));
       var wb = XLSX.utils.book_new(); var ws = XLSX.utils.aoa_to_sheet(wsData); XLSX.utils.book_append_sheet(wb, ws, "HERO_ALERT"); XLSX.writeFile(wb, "Laporan_Hero_Alert.xlsx");
     }
     function exportHeroToPDF() {
       var data = getFilteredHeroData(); if(data.length === 0) { Swal.fire('Tabel Kosong', 'Tidak ada data Hero untuk diexport.', 'warning'); return; }
       const { jsPDF } = window.jspdf; const doc = new jsPDF('landscape');
       doc.setFontSize(16); doc.text("Laporan Monitoring Artikel Hero - SCREAMOUS", 14, 20);
-      var bodyData = data.map(r => [r.kategori, r.nama, r.sku, r.warna, r.totalQty.toString(), r.adsGlobal.toString(), r.estimasiHari.toString() + " Hari", (r.selisih > 0 ? "+" : "") + r.selisih.toString(), r.isKritis ? "KRITIS" : "AMAN"]);
+      var bodyData = data.map(r => [r.kategori, r.nama, r.sku, r.warna, r.totalQty.toString(), r.adsGlobal.toString(), r.estimasiHari.toString() + " Hari", (r.selisih > 0 ? "+" : "") + r.selisih.toString(), r.isKritis ? "RAWAN" : "AMAN"]);
       doc.autoTable({ startY: 34, head: [['Kategori', 'Nama Artikel', 'SKU', 'Warna', 'Total Stok', 'ADS', 'Ketahanan', 'Selisih', 'Status']], body: bodyData, theme: 'grid', headStyles: { fillColor: [220, 53, 69] } });
       doc.save("Laporan_Hero_Alert.pdf");
     }
