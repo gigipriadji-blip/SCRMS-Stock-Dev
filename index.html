@@ -2446,7 +2446,7 @@ async function bukaPopupDetailSizeHero(skuTarget) {
     return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
   });
 
-  // 5. Bangun Tampilan KOTAK/CARD SIZE MENYAMPING (HORIZONTAL)
+  // 5. Bangun Tampilan KOTAK SIZE COMPACT (SEJAJAR 1 BARIS)
   var sizeCardsHtml = "";
   var totalStokKeseluruhan = 0;
 
@@ -2455,33 +2455,36 @@ async function bukaPopupDetailSizeHero(skuTarget) {
     totalStokKeseluruhan += qty;
     
     var isSizeRawan = qty <= limitBatasRawan;
-    var statusBadge = isSizeRawan 
-      ? `<span class="badge bg-danger text-white mt-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>RAWAN</span>` 
-      : `<span class="badge bg-success text-white mt-1"><i class="fa-solid fa-check me-1"></i>AMAN</span>`;
+    // Cukup Ikon Simbol Saja Agar Menghemat Tempat & Estetik
+    var statusIcon = isSizeRawan 
+      ? `<span class="text-danger fs-6 fw-bold" title="Status Rawan"><i class="fa-solid fa-triangle-exclamation"></i></span>` 
+      : `<span class="text-success fs-6 fw-bold" title="Status Aman"><i class="fa-solid fa-circle-check"></i></span>`;
     
     var cardBorderClass = isSizeRawan ? "border-danger bg-danger-subtle" : "border-secondary-subtle bg-light";
     var trendIcon = item.tren === '▲' ? '<i class="fa-solid fa-arrow-trend-up text-success ms-1"></i>' : (item.tren === '▼' ? '<i class="fa-solid fa-arrow-trend-down text-danger ms-1"></i>' : '');
 
     sizeCardsHtml += `
       <div class="col-auto">
-        <div class="card ${cardBorderClass} text-center shadow-sm" style="min-width: 90px; padding: 8px;">
-          <div class="fw-bold fs-5 text-dark border-bottom pb-1 mb-1">${item.size}</div>
-          <div class="font-monospace fs-5 fw-bold text-dark">${qty} <span class="fs-6 fw-normal text-muted">pcs</span> ${trendIcon}</div>
-          <div>${statusBadge}</div>
+        <div class="card ${cardBorderClass} text-center shadow-sm" style="min-width: 75px; padding: 6px 8px;">
+          <div class="fw-bold fs-6 text-dark border-bottom pb-1 mb-1 d-flex justify-content-between align-items-center">
+            <span>${item.size}</span>
+            ${statusIcon}
+          </div>
+          <div class="font-monospace fs-6 fw-bold text-dark mb-0">${qty} <span class="small fw-normal text-muted">pcs</span> ${trendIcon}</div>
         </div>
       </div>
     `;
   });
 
-  // 6. Tampilkan Modal SweetAlert2 Menyamping
+  // 6. Tampilkan Modal SweetAlert2 Menyamping (650px + Horizontal Scrollable bila ukuran sangat banyak)
   Swal.fire({
-    title: `<div class="text-start border-bottom pb-2" style="font-size: 1.2rem;">Detail Stok Size: <strong class="text-dark">${namaArtikel}</strong><br><span class="text-muted small font-monospace" style="font-size: 0.85rem;">SKU: ${skuTarget}</span></div>`,
+    title: `<div class="text-start border-bottom pb-2" style="font-size: 1.15rem;">Detail Stok Size: <strong class="text-dark">${namaArtikel}</strong><br><span class="text-muted small font-monospace" style="font-size: 0.85rem;">SKU: ${skuTarget}</span></div>`,
     html: `
       <div class="my-2 p-2 bg-light border rounded text-start small text-muted">
         <i class="fa-solid fa-info-circle me-1"></i> Batas Stok Rawan Vendor: <strong>${limitBatasRawan} pcs</strong> / size <br>(Berdasarkan target ADS <strong>${adsGlobal}/hr</strong> x Buffer <strong>${targetHariVendor} hari</strong>).
       </div>
       
-      <div class="d-flex flex-wrap gap-2 justify-content-center my-3" style="max-height: 350px; overflow-y: auto;">
+      <div class="d-flex flex-nowrap gap-2 justify-content-start justify-content-md-center my-3 pb-2" style="overflow-x: auto;">
         ${sizeCardsHtml}
       </div>
 
@@ -2489,7 +2492,7 @@ async function bukaPopupDetailSizeHero(skuTarget) {
         TOTAL STOK SELURUH SIZE: <span class="fs-5 text-primary ms-1">${totalStokKeseluruhan} pcs</span>
       </div>
     `,
-    width: '600px', // Lebar modal diperluas agar muat banyak size menyamping
+    width: '650px',
     confirmButtonText: '<i class="fa-solid fa-xmark me-1"></i> Tutup',
     confirmButtonColor: '#4b5563'
   });
