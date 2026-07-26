@@ -1128,9 +1128,9 @@ const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_
       var badgeSelisih = selisih < 0 ? `<span class="badge bg-danger ms-3" style="font-size: 0.8rem;"><i class="fa-solid fa-minus me-1"></i>${Math.abs(selisih)} pcs</span>` : `<span class="badge bg-success ms-3" style="font-size: 0.8rem;"><i class="fa-solid fa-plus me-1"></i>+${selisih} pcs</span>`;
       var tglStr = "-", jamStr = "-"; if(art.latestTimestamp && art.latestTimestamp !== "-") { var spl = art.latestTimestamp.split(" "); if(spl.length >= 2) { tglStr = spl[0]; jamStr = spl[1]; } else { tglStr = art.latestTimestamp; } }
 
-    html += `<tr class="${rowClass}">
+   html += `<tr class="${rowClass}">
         <td class="ps-3">
-          <div class="fw-bold fs-6 text-primary text-decoration-underline" style="cursor: pointer;" onclick="bukaPopupDetailSizeHero('${art.sku}', '${art.nama.replace(/'/g, "\\'")}', ${art.adsGlobal})">
+          <div class="fw-bold fs-6 text-primary text-decoration-underline" style="cursor: pointer;" onclick="bukaPopupDetailSizeHero('${art.sku}')">
             ${art.nama}
           </div>
           <div class="small text-muted font-monospace">${art.sku}</div>
@@ -2421,10 +2421,8 @@ function scrollToTop() {
 }
 
 // 📍 FUNGSI BARU POP-UP DETAIL SIZE HERO DISISIPKAN DI SINI 📍
-async function bukaPopupDetailSizeHero(skuTarget, namaArtikel, adsGlobal) {
-  var targetHariVendor = parseFloat(document.getElementById('inputBufferVendor')?.value || 7) || 7;
-  var limitBatasRawan = Math.ceil(adsGlobal * targetHariVendor);
-
+async function bukaPopupDetailSizeHero(skuTarget) {
+  // 1. Ambil data matching dari globalData
   var matchingSizes = globalData.filter(item => item.sku === skuTarget);
 
   if (matchingSizes.length === 0) {
@@ -2432,6 +2430,15 @@ async function bukaPopupDetailSizeHero(skuTarget, namaArtikel, adsGlobal) {
     return;
   }
 
+  // 2. Ekstrak nama artikel dan ADS global secara otomatis
+  var namaArtikel = matchingSizes[0].nama || skuTarget;
+  var adsGlobal = parseFloat(matchingSizes[0].adsGlobal) || 0;
+
+  // 3. Ambil ambang batas rawan/kritis dari input setting buffer vendor
+  var targetHariVendor = parseFloat(document.getElementById('inputBufferVendor')?.value || 7) || 7;
+  var limitBatasRawan = Math.ceil(adsGlobal * targetHariVendor);
+
+  // 4. Urutkan size berdasarkan urutan baku agar rapi dari S ke XXL atau 28 ke 36
   var urutanBaku = ["S", "M", "L", "XL", "XXL", "XXXL", "28", "30", "32", "34", "36", "39", "40", "41", "42", "43", "NON", "ALL SIZE"];
   matchingSizes.sort((a, b) => {
     var idxA = urutanBaku.indexOf((a.size || "").toUpperCase().trim());
@@ -2439,6 +2446,7 @@ async function bukaPopupDetailSizeHero(skuTarget, namaArtikel, adsGlobal) {
     return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
   });
 
+  // 5. Bangun baris HTML untuk tabel breakdown di dalam Pop-up
   var tableRowsHtml = "";
   var totalStokKeseluruhan = 0;
 
@@ -2461,6 +2469,7 @@ async function bukaPopupDetailSizeHero(skuTarget, namaArtikel, adsGlobal) {
     </tr>`;
   });
 
+  // 6. Tampilkan SweetAlert2 Modal
   Swal.fire({
     title: `<div class="text-start border-bottom pb-2" style="font-size: 1.25rem;">Detail Stok Size: <strong class="text-dark">${namaArtikel}</strong><br><span class="text-muted small font-monospace" style="font-size: 0.85rem;">SKU: ${skuTarget}</span></div>`,
     html: `
@@ -2491,13 +2500,7 @@ async function bukaPopupDetailSizeHero(skuTarget, namaArtikel, adsGlobal) {
     `,
     width: '480px',
     confirmButtonText: '<i class="fa-solid fa-xmark me-1"></i> Tutup',
-    confirmButtonColor: '#4b5563',
-    showClass: {
-      popup: 'animate__animated animate__fadeInUp animate__faster'
-    },
-    hideClass: {
-      popup: 'animate__animated animate__fadeOutDown animate__faster'
-    }
+    confirmButtonColor: '#4b5563'
   });
 }
   </script>
