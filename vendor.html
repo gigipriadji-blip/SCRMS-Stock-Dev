@@ -7,6 +7,7 @@
   <title>SCRMS Vendor Portal</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
   <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/5465/5465858.png">
   <link rel="manifest" href="./manifest.json">
@@ -34,12 +35,19 @@
 </head>
 <body class="bg-light">
 
-  <nav class="navbar navbar-dark bg-dark">
-    <div class="container-fluid px-4">
-      <span class="navbar-brand fw-bold fs-5"><i class="fa-solid fa-boxes-stacked me-2"></i> SCRMS Vendor Portal</span>
-      <button class="btn btn-outline-light" onclick="loadDashboardData()"><i class="fa-solid fa-sync"></i> Refresh</button>
+ <nav class="navbar navbar-dark bg-dark">
+  <div class="container-fluid px-4">
+    <span class="navbar-brand fw-bold fs-5"><i class="fa-solid fa-boxes-stacked me-2"></i> SCRMS Vendor Portal</span>
+    <div class="d-flex gap-2">
+      <button class="btn btn-outline-success text-white border-success" onclick="exportVendorToExcel()">
+        <i class="fa-solid fa-file-excel me-1"></i> Export Excel
+      </button>
+      <button class="btn btn-outline-light" onclick="loadDashboardData()">
+        <i class="fa-solid fa-sync me-1"></i> Refresh
+      </button>
     </div>
-  </nav>
+  </div>
+</nav>
 
   <div class="container-fluid px-4 mt-4">
     <div id="vendorWelcomeHeader" class="mb-3 p-3 bg-white border-start border-primary border-4 rounded shadow-sm">
@@ -326,6 +334,131 @@
       container.innerHTML = html === "" ? "<div class='text-center py-5 text-muted'><i class='fa-solid fa-box-open fa-2x mb-2'></i><br>Tidak ada artikel cocok dengan filter.</div>" : html;
     }
 
+    function exportVendorToExcel() {
+  var container = document.getElementById('articlesContainer');
+  if (!globalData || globalData.length === 0) {
+    Swal.fire('Data Kosong', 'Tidak ada data stok untuk diexport.', 'warning');
+    return;
+  }
+
+  var namaVendor = document.getElementById('txtNamaVendorWelcome') ? document.getElementById('txtNamaVendorWelcome').innerText : "VENDOR";
+  var keyword = document.getElementById('searchArt') ? document.getElementById('searchArt').value.toLowerCase().trim() : "";
+  var filterPrioChecked = document.getElementById('filterPrioOnly') ? document.getElementById('filterPrioOnly').checked : false;
+  var filterTipeStok = document.getElementById('filterTipeStok') ? document.getElementById('filterTipeStok').value : "Semua";
+
+  // 1. Ekstrak SKU Unik yang Sesuai dengan Kategori & Filter Tampilan Aktif
+  var uniqueSkuMap = {};
+  globalData.forEach(function(item) {
+    if (item.kategori !== activeCategory || item.isAktif !== "Aktif") return;
+    if (keyword !== "" && !item.sku.toLowerCase().includes(keyword) && !item.nama.toLowerCase().includes(keyword)) return;
+
+    if (!uniqueSkuMap[item.sku]) {
+      uniqueSkuMap[item.sku] = {
+        sku: item.sku,
+        nama: item.nama,
+        kategori: item.kategori,
+        warna: item.warna || "-",
+        status: item.status,
+        isPriority: item.isPriority,
+        sizes: {}
+      };
+    }
+    if ((uniqueSkuMap[item.sku].warna === "-" || uniqueSkuMap[item.sku].warna === "") && item.warna) {
+      uniqueSkuMap[item.sku].warna = item.warna;
+    }
+    uniqueSkuMap[item.sku].sizes[item.size] = item.qty;
+  });
+
+  var articlesList = Object.values(uniqueSkuMap);
+
+  // Saring Prioritas & Tipe Stok
+  articlesList = articlesList.filter(function(art) {
+    if (filterPrioChecked && !art.isPriority) return false;
+    if (filterTipeStok !== "Semua" && art.status !== filterTipeStok) return false;
+    return true;
+  });
+
+  // Urutkan Artikel Berdasarkan SKU
+  if (typeof sortArticlesBySku === "function") {
+    articlesList = sortArticlesBySku(articlesList);
+  }
+
+  if (articlesList.length === 0) {
+    Swal.fire('Data Kosong', 'Tidak ada artikel yang cocok dengan filter saat ini.', 'warning');
+    return;
+  }
+
+  // 2. Kumpulkan Semua Daftar Ukuran/Size Unik yang Ada
+  var sizeSet = new Set();
+  articlesList.forEach(art => {
+    Object.keys(art.sizes).forEach(s => {
+      if (s !== "-") sizeSet.add(s);
+    });
+  });
+
+  var urutanBaku = ["S", "M", "L", "XL", "XXL", "XXXL", "28", "30", "32", "34", "36", "39", "40", "41", "42", "43", "NON", "ALL SIZE"];
+  var sortedSizes = Array.from(sizeSet).sort((a, b) => {
+    var idxA = urutanBaku.indexOf(a.toUpperCase());
+    var idxB = urutanBaku.indexOf(b.toUpperCase());
+    return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
+  });
+
+  // 3. Susun Header Laporan Excel
+  var excelRows = [
+    ["PORTAL KATALOG & STOK VENDOR - " + namaVendor.toUpperCase()],
+    ["KATEGORI:", activeCategory],
+    ["TANGGAL UNDUH:", new Date().toLocaleDateString('id-ID') + " " + new Date().toLocaleTimeString('id-ID')],
+    []
+  ];
+
+  var headerRow = ["NO", "SKU", "NAMA ARTIKEL", "WARNA", "PRIORITAS", "TIPE STOK"];
+  sortedSizes.forEach(s => headerRow.push("SIZE " + s));
+  headerRow.push("TOTAL STOK");
+  excelRows.push(headerRow);
+
+  // 4. Susun Baris Data Artikel
+  var totalPerSize = {};
+  sortedSizes.forEach(s => totalPerSize[s] = 0);
+  var grandTotalPieces = 0;
+
+  articlesList.forEach((art, index) => {
+    var row = [
+      index + 1,
+      art.sku,
+      art.nama,
+      art.warna,
+      art.isPriority ? "PRIORITAS" : "REGULER",
+      art.status
+    ];
+
+    var totalQtyArtikel = 0;
+    sortedSizes.forEach(s => {
+      var q = parseInt(art.sizes[s]) || 0;
+      row.push(q);
+      totalQtyArtikel += q;
+      totalPerSize[s] += q;
+    });
+
+    row.push(totalQtyArtikel);
+    grandTotalPieces += totalQtyArtikel;
+    excelRows.push(row);
+  });
+
+  // 5. Baris Sub-Total / Summary
+  var summaryRow = ["", "", "TOTAL STOK PER SIZE", "", "", ""];
+  sortedSizes.forEach(s => summaryRow.push(totalPerSize[s]));
+  summaryRow.push(grandTotalPieces);
+  excelRows.push(summaryRow);
+
+  // 6. Generate & Download File Excel
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(excelRows);
+  XLSX.utils.book_append_sheet(wb, ws, "STOK_VENDOR");
+  
+  var fileName = "Laporan_Stok_Vendor_" + activeCategory.replace(/[^a-zA-Z0-9]/g, '_') + "_" + new Date().toISOString().slice(0, 10) + ".xlsx";
+  XLSX.writeFile(wb, fileName);
+}
+    
     function filterDisplay() {
       var input = document.getElementById('searchArt'); var btn = document.getElementById('btnClearSearchArt');
       if (btn) { if (input && input.value.trim() !== "") btn.style.setProperty('display', 'block', 'important'); else btn.style.setProperty('display', 'none', 'important'); }
